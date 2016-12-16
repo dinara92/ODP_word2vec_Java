@@ -34,7 +34,9 @@ public class TfIdf {
                 count++;
             }
         }
+        //return (1 + Math.log(count / (double) totalterms.size()));
         return count / (double) totalterms.size();
+
     }
     //</editor-fold>
     
