@@ -9,6 +9,7 @@ import java.io.LineNumberReader;
 import java.io.PrintStream;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -376,6 +377,34 @@ public class Main {
 		System.out.println("Computed centroids for " + count_categories + " categories");
 		return centroidMap;
 	}
+	
+	/*public static Map<String, Centroid> computeCentroidsWord2Vec(Map<String, NodeInfo> taxonomy) throws IOException {
+		int count_categories = 0;
+		Map<String, Centroid> centroidMap = new HashMap<String, Centroid>();
+		Centroid centroidThis;
+		DocumentParser dp = new DocumentParser();
+		List<Double> eachPageVectorsList;
+		
+		for (String catId : taxonomy.keySet()) {
+
+			List<PageNode> pagesInThisCateg = taxonomy.get(catId).getPages();
+			for(PageNode page: pagesInThisCateg){
+				List<String> word2vecVectors = page.getWord2VecVectors();
+				for(Double oneVector: word2vecVectors)
+					eachPageVectorsList.add(oneVector);
+			}
+			List<Double> catCentroid = dp.makeCentroidWord2Vec(eachPageVectorsList);
+			centroidThis = new Centroid();
+
+			centroidThis.setCentroid(catCentroid);
+			centroidThis.setCentroid_lengthNorm();
+			centroidMap.put(catId, centroidThis);
+	
+			count_categories++;
+		}
+		System.out.println("Computed centroids for " + count_categories + " categories");
+		return centroidMap;
+	}*/
 
 	public static Map<String, List<Integer>> computeCosineSim (Map<String, List<Map<String, Double>>> categoryTfidfDocsVectors, Map<String, Centroid> categoryCentroids){
 		
@@ -887,6 +916,20 @@ public class Main {
 
 	}
 	
+	public static List<Double> listOfStringToListOfDoubles(List<String> str_list){
+		
+		List<Double> listOfDoubles = new ArrayList<Double>();
+		//System.out.println(str_list.size());
+        for(String str: str_list){
+        	
+        	double num = Double.parseDouble(str);
+        	//System.out.println(num);
+        	listOfDoubles.add(num);
+        }
+        System.out.println(listOfDoubles.size());
+		return listOfDoubles;
+	}
+	
 	public static Map<String, NodeInfo> csvToHashMap(String csvFile) throws FileNotFoundException{
 		NodeInfo nodeTrain;
 		PageNode page;
@@ -896,16 +939,21 @@ public class Main {
 		//String csvFile = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
 
         Scanner scanner = new Scanner(new File(csvFile));
+        scanner.nextLine();
         while (scanner.hasNext()) {
             List<String> line = CSVUtils.parseLine(scanner.nextLine());
             //System.out.println("Document [id= " + line.get(0) + ", catid= " + line.get(1) + " , pages=" + line.get(3) + "\"" +"]");
         	
         	page = new PageNode();
 			currentCategory = line.get(1);
-			page.set_id(line.get(0));
+			page.set_id(line.get(4));//get pageid to match 'id' field of dmoz_external_pages IMPORTANT!
             page.setCatid(line.get(1));
             page.setTokenizedPage(StringProcessingUtils.tokenizeString(line.get(3)));
-			
+
+        	List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(line.get(5));
+			page.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
+
+            
         	if (thisCategoryPagesMap.containsKey(currentCategory)) {
 				thisCategoryPagesMap.get(currentCategory).add(page);
 			} else {
@@ -937,26 +985,35 @@ public class Main {
 		
 		
 		Map<String, NodeInfo> trainDataSetHeuristicsByCateg = new HashMap<String, NodeInfo>();
+		Map<String, NodeInfo> trainDataSetByCateg = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSet = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSetNew = new HashMap<String, NodeInfo>();
 
 		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
+		//String csvFileTrain_bigSet = "C:/Users/dinaraDILab/word2vec/table_pages_train_bigset.csv";
+
 		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_csv_file.csv";
 
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);
+		//trainDataSetByCateg = csvToHashMap(csvFileTrain_bigSet);
+
 		testDataSet = csvToHashMap(csvFileTest);
         
+
 		//from txt file, will need to read to trainDataSetHeuristics and testDataSetHeuristics data structures
-		InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
-		Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		//InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
+		//Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		
+		//Map<String, Centroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg);
+
 		//testDataSetNew = applyTestHeuristics(testDataSet);
 		
-		Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSet);
+		//Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSet);
 		
 		/* centroids evaluation */
 		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
-		Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
-		evalCentroids(cosineSimC);
+		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMapHeuristics);
+		//evalCentroids(cosineSimC);
 		
 	}
 	
@@ -971,6 +1028,7 @@ public class Main {
 		System.out.println("Forming centroid and evaluating took " + period + "ms");
 		millis = System.currentTimeMillis();
 		}
+		
 		
 	public static void makeMergeCentroids(Map<String, Centroid> centroids, Map<String, NodeInfo> taxonomyAll,
 				Map<String, NodeInfo> testDataSet, Map<String, List<Map<String, Double>>> vectorsTestDataSet) {
@@ -1019,6 +1077,8 @@ public class Main {
 				}
 			}
 			node.setPages(trainPagesTerms);
+			node.setFatherid(taxonomyAll.get(catid).getFatherid());
+			node.setCatid(catid);
 			node.setCategory_topic(taxonomyAll.get(catid).getCategory_topic());
 			taxonomyTrain.put(catid, node);
 		}
@@ -1167,11 +1227,24 @@ public class Main {
 			/*** Centroids ***/
 			millis = System.currentTimeMillis();
 			Map<String, Centroid> centroidMap = computeCentroids(trainDataSet, invIndexTrain);
+
 			period = System.currentTimeMillis() - millis;
 			System.out.println("computing centroids took " + period + "ms");
 			return centroidMap;
 			
 		}
 		
+		/*public static Map<String, Centroid> runCentroidsWord2VecPart(Map<String, NodeInfo> trainDataSet) throws IOException {
+			long millis = System.currentTimeMillis();
+			long period = 0;
+			
+			millis = System.currentTimeMillis();
+			Map<String, Centroid> centroidMap = computeCentroidsWord2Vec(trainDataSet);
+
+			period = System.currentTimeMillis() - millis;
+			System.out.println("computing centroids took " + period + "ms");
+			return centroidMap;
+			
+		}*/
 		
 }

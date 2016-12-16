@@ -64,48 +64,7 @@ public class DocumentParser {
 		return tfidfDocsMap;
 	}
 
-	public List<Map<Integer, Map<String, Double>>> tfIdfCalculator3(Map<Integer, List<String>> termsDocsArray, InvertedIndex index)
-			throws IOException {
-		double tf; // term frequency
-		double idf; // inverse document frequency
-		double tf_idf = 0; // term requency inverse document frequency
-		TfIdf tfIdfClass = new TfIdf();
-		List<Map<Integer, Map<String, Double>>> tfidfDocsMap = new ArrayList<Map<Integer, Map<String, Double>>>();
-
-		for (Integer docTermsArray : termsDocsArray.keySet()) {
-			// System.out.println("Now calculating each docTermsArray for " +
-			// docTermsArray.toString() + " with size " + docTermsArray.size());
-			//System.out.println("calculating tfidf for " + docTermsArray);
-			Map<String, Double> tfidfMap = new HashMap<String, Double>();
-			Map<Integer, Map<String, Double>> tfidfMapNum = new HashMap<Integer, Map<String, Double>>();
-
-			for (String term : termsDocsArray.get(docTermsArray)) {
-				tf = tfIdfClass.tfCalculator(termsDocsArray.get(docTermsArray), term);
-				idf = tfIdfClass.idfCalculatorNew(term, index);
-				tf_idf = tf * idf;
-				tfidfMap.put(term, tf_idf);
-			}
-			//tfidfMapNum.put(docTermsArray, tfidfMap);
-
-			/*** Normalizing vectors ***/
-			double vec_length = 0;
-			for (String vec : tfidfMap.keySet()) {
-				double tfidf_vec = tfidfMap.get(vec);
-				vec_length += Math.pow(tfidf_vec, 2);
-			}
-			double norm = Math.sqrt(vec_length);
-			// put Normalized vectors
-			for (String term : tfidfMap.keySet()) {
-				tfidfMap.put(term, tfidfMap.get(term) / (double) (norm));
-			}
-			tfidfMapNum.put(docTermsArray, tfidfMap);
-
-			/*** ***************** ***/
-			
-			tfidfDocsMap.add(tfidfMapNum);
-		}
-		return tfidfDocsMap;
-	}
+	
 	
 	public Map<String, Double> makeCentroid(List<Map<String, Double>> tfidfDocsMap) {
 		Map<String, Double> centroid = new HashMap<String, Double>();
@@ -138,7 +97,39 @@ public class DocumentParser {
 		}*/
 		return centroid;
 	}
-	 
+	
+	public List<Double> makeCentroidWord2Vec(List<List<Double>> pagesVectorsList) {
+		List<Double> centroid = new ArrayList<Double>();
+
+		for (List<Double> doc : pagesVectorsList) {
+			for (int i =0; i<doc.size(); i++) {
+				//if (centroid.containsKey(term)) {
+					centroid.add(centroid.get(i) + doc.get(i));
+				//} else {
+				//	centroid.put(term, doc.get(term));
+				}
+			}
+		
+		/*** Normalizing centroids ***/
+		/*double vec_length = 0;
+		for (String vec : centroid.keySet()) {
+			double tfidf_vec = centroid.get(vec);
+			vec_length += Math.pow(tfidf_vec, 2);
+		}
+		double norm = Math.sqrt(vec_length);*/
+		
+		// put Normalized centroids and / tfidfDocsMap.size()
+		/*for (String term : centroid.keySet()) {
+			centroid.put(term, centroid.get(term) / (double)(norm) / (double) tfidfDocsMap.size());
+		}*/
+		/*** **************** ***/
+		
+		/*for (String term : centroid.keySet()) {
+			centroid.put(term, centroid.get(term) / tfidfDocsMap.size());
+		}*/
+		return centroid;
+	}
+	
 	 public CategoryTree makeHieararchy(Map<String, NodeInfo> taxonomy) {
 		Map<String, List<String>> tree = new HashMap<String, List<String>>();
 		List<String> childList;
