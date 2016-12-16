@@ -87,7 +87,21 @@ public class StringProcessingUtils {
 		}
 		return result;
 	}
-	
+    
+    public static List<String> tokenizeStringBySpace(String string) {
+		//String result = "";
+    	List<String> result = new ArrayList<String>();
+
+		String[] words = string.split("\\s+");
+
+		for(String word : words) {
+			if(word.isEmpty()) continue;
+			//result += (word+" ");
+			result.add(word);
+		}
+		return result;
+	}
+    
     public static List<String> removeStemmedStopWords(String string) {
 		//String result = "";
     	List<String> result = new ArrayList<String>();
