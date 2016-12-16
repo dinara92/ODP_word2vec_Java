@@ -7,7 +7,16 @@ public class PageNode {
 	String description;
 	List<String> tokenizedPage;
 	String catid;
+	List<Double> word2VecVectors;
 	
+	public List<Double> getWord2VecVectors() {
+		return word2VecVectors;
+	}
+
+	public void setWord2VecVectors(List<Double> word2VecVectors) {
+		this.word2VecVectors = word2VecVectors;
+	}
+
 	public String getCatid() {
 		return catid;
 	}
