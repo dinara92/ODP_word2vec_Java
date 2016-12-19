@@ -26,6 +26,7 @@ import com.mysql.jdbc.PreparedStatement;
 import com.mysql.jdbc.Statement;
 
 import centroid.Centroid;
+import centroid.Word2VecCentroid;
 import csv_utils.CSVUtils;
 import hashmap.ConnectDb;
 import hashmap.DBtoHashmap;
@@ -378,34 +379,35 @@ public class Main {
 		return centroidMap;
 	}
 	
-	/*public static Map<String, Centroid> computeCentroidsWord2Vec(Map<String, NodeInfo> taxonomy) throws IOException {
+	public static Map<String, Word2VecCentroid> computeCentroidsWord2Vec(Map<String, NodeInfo> taxonomy) throws IOException {
 		int count_categories = 0;
-		Map<String, Centroid> centroidMap = new HashMap<String, Centroid>();
-		Centroid centroidThis;
+		Map<String, Word2VecCentroid> centroidMap = new HashMap<String, Word2VecCentroid>();
+		Word2VecCentroid centroidThis;
 		DocumentParser dp = new DocumentParser();
-		List<Double> eachPageVectorsList;
+		List<List<Double>> eachPageVectorsList = new ArrayList<List<Double>>();
+		List<Double> word2vecVectors;
 		
 		for (String catId : taxonomy.keySet()) {
 
 			List<PageNode> pagesInThisCateg = taxonomy.get(catId).getPages();
-			for(PageNode page: pagesInThisCateg){
-				List<String> word2vecVectors = page.getWord2VecVectors();
-				for(Double oneVector: word2vecVectors)
-					eachPageVectorsList.add(oneVector);
+			for(PageNode page: pagesInThisCateg) {
+					word2vecVectors = page.getWord2VecVectors();
+					eachPageVectorsList.add(word2vecVectors);
 			}
 			List<Double> catCentroid = dp.makeCentroidWord2Vec(eachPageVectorsList);
-			centroidThis = new Centroid();
+			centroidThis = new Word2VecCentroid();
 
 			centroidThis.setCentroid(catCentroid);
-			centroidThis.setCentroid_lengthNorm();
+			//centroidThis.setCentroid_lengthNorm();
 			centroidMap.put(catId, centroidThis);
 	
 			count_categories++;
 		}
 		System.out.println("Computed centroids for " + count_categories + " categories");
 		return centroidMap;
-	}*/
-
+	}
+	
+	
 	public static Map<String, List<Integer>> computeCosineSim (Map<String, List<Map<String, Double>>> categoryTfidfDocsVectors, Map<String, Centroid> categoryCentroids){
 		
 		CosineSim cosineSim = new CosineSim();
@@ -474,7 +476,74 @@ public class Main {
 		return returnedCatidsMapTpFnFp;
 	}
 		
+	public static Map<String, List<Integer>> computeCosineSimWord2Vec (Map<String, NodeInfo>  testDataNodes, Map<String, Word2VecCentroid> centroidMap){
+		
+		CosineSim cosineSim = new CosineSim();
+		List<String> returnedCatids = new ArrayList<String>();
+		List<Integer> tpFnFpList;
+		Map<String, List<Integer>> returnedCatidsMapTpFnFp = new HashMap<String, List<Integer>>();
+		Map<String, Integer> FPMap = new HashMap<String, Integer>();
+		Map<String, List<String>> returnedCatidsMap = new HashMap<String, List<String>>();
+		int current_hit_countTP = 0;
+		int current_miss_countFN = 0;
+		String assignedCatId;
+		
+		for(String catid : testDataNodes.keySet()) {
+			returnedCatids.clear();
+			tpFnFpList = new ArrayList<Integer>();
+		//String catid = "419823"; //425216, 425244, 423721, 272660, 418977, 418269, 418240, 428695, 425236, 957244, 425086 assigned to 957244 each time
+		//419823 - this  s only 2 docs -> all docs assigned to training set?
 	
+			//if(categoryTfidfDocsVectors.get(catid).size() >3 ){
+			for(PageNode doc : testDataNodes.get(catid).getPages()) {
+				assignedCatId = cosineSim.maxCosineSimilarityWord2Vec(doc, centroidMap);		
+				returnedCatids.add(assignedCatId);
+				
+				//if (!assignedCatId.equals(catid)) {
+				//	System.out.println("Page of category " + catid + " was falsely assigned to " + assignedCatId);
+				//}
+				
+				if (FPMap.containsKey(assignedCatId)) {
+					FPMap.put(assignedCatId, FPMap.get(assignedCatId) + 1);
+				} else {
+					FPMap.put(assignedCatId, 1);
+				}
+			}
+			//System.out.println("For category " + catid +  " Assigned catids are : " + returnedCatids);
+			
+			current_hit_countTP = Collections.frequency(returnedCatids, catid);
+			//System.out.println("For catid " + catid + "hit count is " + current_hit_countTP);
+			
+			int currentClassFP = FPMap.get(catid) == null ? 0 : FPMap.get(catid);
+			FPMap.put(catid, currentClassFP - current_hit_countTP);
+			//System.out.println("TP is : " + hit_countTP);
+			//current_miss_countFN = returnedCatids.size() - current_hit_countTP;
+			current_miss_countFN = testDataNodes.get(catid).getPages().size() - current_hit_countTP;
+			//System.out.println("FN is : " + miss_countFN);
+			//System.out.println("Pair of TP and FN is : " + pairHitMiss);
+
+		//}
+			tpFnFpList.add(current_hit_countTP);
+			tpFnFpList.add(current_miss_countFN);
+			returnedCatidsMapTpFnFp.put(catid, tpFnFpList);
+			
+		//else System.out.println("Too small test set");
+		}
+		
+
+		for(String catid : FPMap.keySet()) {
+			if(returnedCatidsMapTpFnFp.containsKey(catid)){ //because of the below comment, added this condition
+			tpFnFpList = returnedCatidsMapTpFnFp.get(catid); //here tpFnFpList becomes null, as catid in returnedCatidsMapTpFnFp is from test set doc vectors
+			tpFnFpList.add(FPMap.get(catid));
+			returnedCatidsMapTpFnFp.put(catid, tpFnFpList);
+			}
+			//System.out.println("FP for this category : " + catid + " is " + FPMap.get(catid));
+			
+		}
+
+		return returnedCatidsMapTpFnFp;
+	}
+
 	 public static List<Integer> uniqueRandNum(int upperBound) {
 	        ArrayList<Integer> list = new ArrayList<Integer>();
 	        for (int i = 0; i < upperBound; i++) {
@@ -919,14 +988,18 @@ public class Main {
 	public static List<Double> listOfStringToListOfDoubles(List<String> str_list){
 		
 		List<Double> listOfDoubles = new ArrayList<Double>();
-		//System.out.println(str_list.size());
-        for(String str: str_list){
-        	
-        	double num = Double.parseDouble(str);
+		double num;
+        for(String str: str_list) {
+        	try {
+            	num = Double.parseDouble(str);
+        	} catch (NumberFormatException nfe) {
+        		System.out.println("Couldn't parse row to double, skipping " + nfe);
+        		continue;
+        	}
         	//System.out.println(num);
         	listOfDoubles.add(num);
         }
-        System.out.println(listOfDoubles.size());
+        //System.out.println(listOfDoubles.size());
 		return listOfDoubles;
 	}
 	
@@ -994,17 +1067,21 @@ public class Main {
 
 		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_csv_file.csv";
 
+		System.out.println("Started read train data from csv");
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);
 		//trainDataSetByCateg = csvToHashMap(csvFileTrain_bigSet);
+		System.out.println("Finished read train data from csv");
 
+		System.out.println("Started read test data from csv");
 		testDataSet = csvToHashMap(csvFileTest);
-        
+		System.out.println("Finished read test data from csv");
 
 		//from txt file, will need to read to trainDataSetHeuristics and testDataSetHeuristics data structures
 		//InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
 		//Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
 		
-		//Map<String, Centroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg);
+		System.out.println("\tNow calculating centroids");
+		Map<String, Word2VecCentroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg);
 
 		//testDataSetNew = applyTestHeuristics(testDataSet);
 		
@@ -1012,7 +1089,14 @@ public class Main {
 		
 		/* centroids evaluation */
 		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
-		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMapHeuristics);
+		System.out.println("\tNow computing cosine similarity");
+		Map<String, List<Integer>> cosineSimC = computeCosineSimCWord2Vec(testDataSet, centroidMap);
+		System.out.println("\tNow evaluating");
+		evalCentroids(cosineSimC);
+		
+		/* centroids evaluation */
+		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
+		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
 		//evalCentroids(cosineSimC);
 		
 	}
@@ -1022,6 +1106,7 @@ public class Main {
 		long millis = System.currentTimeMillis();
 		long period = 0;
 		
+		System.out.println("Starting from main..");
 		runCentroidsFromCSV();
 		
 		period = System.currentTimeMillis() - millis;
@@ -1158,6 +1243,7 @@ public class Main {
 			return CategoryTfidfDocsVectorsMap;
 		}
 		
+		
 		public static void evalCentroids (Map<String, List<Integer>> cosineSimC){
 			
 			long millis = System.currentTimeMillis();
@@ -1219,6 +1305,17 @@ public class Main {
 			return cosineSimC;
 		}
 		
+		public static Map<String, List<Integer>> computeCosineSimCWord2Vec (Map<String, NodeInfo>  testDataNodes, Map<String, Word2VecCentroid> centroidMap) {
+			long millis = System.currentTimeMillis();
+			long period = 0;
+			/*** Cosine similarity for centroids ***/
+			millis = System.currentTimeMillis();
+			Map<String, List<Integer>> cosineSimC = computeCosineSimWord2Vec(testDataNodes, centroidMap);
+			period = System.currentTimeMillis() - millis;
+			System.out.println("computing cosineSimilarity for centroids took " + period + "ms");
+			
+			return cosineSimC;
+		}
 
 		public static Map<String, Centroid> runCentroidsPart(Map<String, NodeInfo> trainDataSet, InvertedIndex invIndexTrain) throws IOException {
 			long millis = System.currentTimeMillis();
@@ -1234,17 +1331,17 @@ public class Main {
 			
 		}
 		
-		/*public static Map<String, Centroid> runCentroidsWord2VecPart(Map<String, NodeInfo> trainDataSet) throws IOException {
-			long millis = System.currentTimeMillis();
+		public static Map<String, Word2VecCentroid> runCentroidsWord2VecPart(Map<String, NodeInfo> trainDataSet) throws IOException {
+			long millis;
 			long period = 0;
 			
 			millis = System.currentTimeMillis();
-			Map<String, Centroid> centroidMap = computeCentroidsWord2Vec(trainDataSet);
+			Map<String, Word2VecCentroid> centroidMap = computeCentroidsWord2Vec(trainDataSet);
 
 			period = System.currentTimeMillis() - millis;
 			System.out.println("computing centroids took " + period + "ms");
 			return centroidMap;
 			
-		}*/
+		}
 		
 }

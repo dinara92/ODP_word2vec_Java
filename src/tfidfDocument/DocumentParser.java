@@ -6,6 +6,7 @@ package tfidfDocument;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -99,16 +100,36 @@ public class DocumentParser {
 	}
 	
 	public List<Double> makeCentroidWord2Vec(List<List<Double>> pagesVectorsList) {
+		/*
 		List<Double> centroid = new ArrayList<Double>();
-
 		for (List<Double> doc : pagesVectorsList) {
 			for (int i =0; i<doc.size(); i++) {
-				//if (centroid.containsKey(term)) {
-					centroid.add(centroid.get(i) + doc.get(i));
-				//} else {
-				//	centroid.put(term, doc.get(term));
+				Double sum = centroid.get(i) + doc.get(i);
+				
+				if (!centroid.isEmpty()) {
+					centroid.add(sum);
+				} else {
+					centroid.add(doc.get(i));
 				}
 			}
+		}
+		*/
+		if (pagesVectorsList.size() == 0) {
+			System.out.println("Warning! category contains 0 pages");
+			return Collections.emptyList();
+		}
+		List<Double> sampleRow = pagesVectorsList.get(0);
+		int sampleColumnSize = sampleRow.size();
+		List<Double> centroid = new ArrayList<Double>(Collections.nCopies(sampleColumnSize, 0.0));
+		for (int j = 0; j < sampleColumnSize; j++) {
+			for (int i = 0; i < pagesVectorsList.size(); i++) {
+				centroid.set(j, centroid.get(j) + pagesVectorsList.get(i).get(j));
+			}
+		}
+		for (int i = 0; i < centroid.size(); i++) {
+			centroid.set(i, centroid.get(i)/pagesVectorsList.size());
+		}
+		//need to normalize
 		
 		/*** Normalizing centroids ***/
 		/*double vec_length = 0;
@@ -127,6 +148,8 @@ public class DocumentParser {
 		/*for (String term : centroid.keySet()) {
 			centroid.put(term, centroid.get(term) / tfidfDocsMap.size());
 		}*/
+		//System.out.println("Centroid computed as " + centroid);
+		//System.out.println("Centroid size " + centroid.size());
 		return centroid;
 	}
 	
