@@ -114,6 +114,10 @@ public class DocumentParser {
 			}
 		}
 		*/
+		
+		long millis = System.currentTimeMillis();
+		long period = 0;
+		
 		if (pagesVectorsList.size() == 0) {
 			System.out.println("Warning! category contains 0 pages");
 			return Collections.emptyList();
@@ -150,6 +154,8 @@ public class DocumentParser {
 		}*/
 		//System.out.println("Centroid computed as " + centroid);
 		//System.out.println("Centroid size " + centroid.size());
+		period = System.currentTimeMillis() - millis;
+		System.out.println("\tMaking one centroid took: " + period + "ms");
 		return centroid;
 	}
 	

@@ -398,7 +398,6 @@ public class Main {
 			centroidThis = new Word2VecCentroid();
 
 			centroidThis.setCentroid(catCentroid);
-			//centroidThis.setCentroid_lengthNorm();
 			centroidMap.put(catId, centroidThis);
 	
 			count_categories++;
