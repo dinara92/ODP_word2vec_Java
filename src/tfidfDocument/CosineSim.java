@@ -100,8 +100,15 @@ public class CosineSim {
 			double centroid_lengthNorm = categoryCentroids.get(catid).getCentroid_lengthNorm();
 			
 			cosineSimSum = 0;
-			cosineSim.clear();
+			//cosineSim.clear();
 			for (int i = 0; i < doc.getWord2VecVectors().size(); i++) {
+				if (doc.getWord2VecVectors().isEmpty()) {
+					System.out.println("Warning! test document is empty");
+					continue;
+				}
+				if (cosineSim.size() <= i) {
+					cosineSim.add(0.0);
+				}
 				cosineSim.set(i, doc.getWord2VecVectors().get(i) * centroid.get(i));
 			}
 			for (double value: cosineSim) {

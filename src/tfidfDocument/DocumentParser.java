@@ -158,7 +158,7 @@ public class DocumentParser {
 		//System.out.println("Centroid computed as " + centroid);
 		//System.out.println("Centroid size " + centroid.size());
 		period = System.currentTimeMillis() - millis;
-		System.out.println("\tMaking one centroid took: " + period + "ms");
+		//System.out.println("\tMaking one centroid took: " + period + "ms");
 		
 		return centroid;
 	}
