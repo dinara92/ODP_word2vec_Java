@@ -385,14 +385,14 @@ public class Main {
 		Word2VecCentroid centroidThis;
 		DocumentParser dp = new DocumentParser();
 		List<List<Double>> eachPageVectorsList = new ArrayList<List<Double>>();
-		List<Double> word2vecVectors;
+		List<Double> word2vecVector;
 		
 		for (String catId : taxonomy.keySet()) {
-
+			eachPageVectorsList.clear();
 			List<PageNode> pagesInThisCateg = taxonomy.get(catId).getPages();
 			for(PageNode page: pagesInThisCateg) {
-					word2vecVectors = page.getWord2VecVectors();
-					eachPageVectorsList.add(word2vecVectors);
+					word2vecVector = page.getWord2VecVectors();
+					eachPageVectorsList.add(word2vecVector);
 			}
 			List<Double> catCentroid = dp.makeCentroidWord2Vec(eachPageVectorsList);
 			centroidThis = new Word2VecCentroid();

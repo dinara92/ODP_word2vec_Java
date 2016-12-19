@@ -125,14 +125,17 @@ public class DocumentParser {
 		List<Double> sampleRow = pagesVectorsList.get(0);
 		int sampleColumnSize = sampleRow.size();
 		List<Double> centroid = new ArrayList<Double>(Collections.nCopies(sampleColumnSize, 0.0));
+
 		for (int j = 0; j < sampleColumnSize; j++) {
 			for (int i = 0; i < pagesVectorsList.size(); i++) {
 				centroid.set(j, centroid.get(j) + pagesVectorsList.get(i).get(j));
 			}
 		}
+
 		for (int i = 0; i < centroid.size(); i++) {
 			centroid.set(i, centroid.get(i)/pagesVectorsList.size());
 		}
+
 		//need to normalize
 		
 		/*** Normalizing centroids ***/
@@ -156,6 +159,7 @@ public class DocumentParser {
 		//System.out.println("Centroid size " + centroid.size());
 		period = System.currentTimeMillis() - millis;
 		System.out.println("\tMaking one centroid took: " + period + "ms");
+		
 		return centroid;
 	}
 	
