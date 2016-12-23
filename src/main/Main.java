@@ -486,6 +486,7 @@ public class Main {
 		int current_hit_countTP = 0;
 		int current_miss_countFN = 0;
 		String assignedCatId;
+		int assignedToFather = 0;
 		
 		for(String catid : testDataNodes.keySet()) {
 			returnedCatids.clear();
@@ -498,9 +499,13 @@ public class Main {
 				assignedCatId = cosineSim.maxCosineSimilarityWord2Vec(doc, centroidMap);		
 				returnedCatids.add(assignedCatId);
 				
-				//if (!assignedCatId.equals(catid)) {
-				//	System.out.println("Page of category " + catid + " was falsely assigned to " + assignedCatId);
-				//}
+				if (!assignedCatId.equals(catid)) {
+					//System.out.println("Page id: " + doc.get_id() + " of category " + catid + " was falsely assigned to " + assignedCatId);
+					if(assignedCatId.equals(testDataNodes.get(catid).getFatherid())){
+						//System.out.println("\tThis page is assigned to its category FATHER!");
+						assignedToFather++;
+					}
+				}
 				
 				if (FPMap.containsKey(assignedCatId)) {
 					FPMap.put(assignedCatId, FPMap.get(assignedCatId) + 1);
@@ -529,7 +534,8 @@ public class Main {
 		//else System.out.println("Too small test set");
 		}
 		
-
+		
+		System.out.println("\tTotal these number of docs were assigned to FATHER of its category: " + assignedToFather);
 		for(String catid : FPMap.keySet()) {
 			if(returnedCatidsMapTpFnFp.containsKey(catid)){ //because of the below comment, added this condition
 			tpFnFpList = returnedCatidsMapTpFnFp.get(catid); //here tpFnFpList becomes null, as catid in returnedCatidsMapTpFnFp is from test set doc vectors
@@ -1006,7 +1012,9 @@ public class Main {
 		NodeInfo nodeTrain;
 		PageNode page;
 		Map<String, NodeInfo> trainDataSetHeuristicsByCateg = new HashMap<String, NodeInfo>();
-		Map<String, List<PageNode>> thisCategoryPagesMap = new HashMap<String, List<PageNode>>();
+		//Map<String, List<PageNode>> thisCategoryPagesMap = new HashMap<String, List<PageNode>>();
+		Map<String, NodeInfo> thisCategoryPagesMap = new HashMap<String, NodeInfo>();
+
 		String currentCategory;
 		//String csvFile = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
 
@@ -1021,17 +1029,26 @@ public class Main {
 			page.set_id(line.get(4));//get pageid to match 'id' field of dmoz_external_pages IMPORTANT!
             page.setCatid(line.get(1));
             page.setTokenizedPage(StringProcessingUtils.tokenizeString(line.get(3)));
-
+            page.setFatherid(line.get(2));
+            
         	List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(line.get(5));
 			page.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
 
             
         	if (thisCategoryPagesMap.containsKey(currentCategory)) {
-				thisCategoryPagesMap.get(currentCategory).add(page);
+	    		//thisCategoryPagesMap.get(currentCategory).add(page);
+				thisCategoryPagesMap.get(currentCategory).getPages().add(page);
+
 			} else {
 				List<PageNode> allCategoryPages = new ArrayList<PageNode>();
 				allCategoryPages.add(page);
-				thisCategoryPagesMap.put(currentCategory, allCategoryPages);
+				
+				NodeInfo categNode = new NodeInfo();
+				categNode.setFatherid(page.getFatherid());
+				categNode.setPages(allCategoryPages);
+				//thisCategoryPagesMap.put(currentCategory, allCategoryPages);
+				thisCategoryPagesMap.put(currentCategory, categNode);
+
 			}
         }
         scanner.close();
@@ -1040,8 +1057,8 @@ public class Main {
         	//System.out.println("Category " + catid + " has" + " " + thisCategoryPagesMap.get(catid));
         	nodeTrain = new NodeInfo();
         	nodeTrain.setCatid(catid);
-			//nodeTrain.setFatherid();
-        	nodeTrain.setPages(thisCategoryPagesMap.get(catid));
+			nodeTrain.setFatherid(thisCategoryPagesMap.get(catid).getFatherid()); //added this
+        	nodeTrain.setPages(thisCategoryPagesMap.get(catid).getPages());
         	//nodeTrain.setCategory_topic();
         	
         	trainDataSetHeuristicsByCateg.put(catid, nodeTrain);
@@ -1061,10 +1078,10 @@ public class Main {
 		Map<String, NodeInfo> testDataSet = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSetNew = new HashMap<String, NodeInfo>();
 
-		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
+		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
 		//String csvFileTrain_bigSet = "C:/Users/dinaraDILab/word2vec/table_pages_train_bigset.csv";
 
-		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_csv_file.csv";
+		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
 
 		System.out.println("Started read train data from csv");
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);

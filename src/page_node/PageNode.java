@@ -8,7 +8,16 @@ public class PageNode {
 	List<String> tokenizedPage;
 	String catid;
 	List<Double> word2VecVectors;
+	String fatherid;
 	
+	public String getFatherid() {
+		return fatherid;
+	}
+
+	public void setFatherid(String fatherid) {
+		this.fatherid = fatherid;
+	}
+
 	public List<Double> getWord2VecVectors() {
 		return word2VecVectors;
 	}
