@@ -41,4 +41,12 @@ public class Word2VecCentroid {
 		centroid_lengthNorm = Math.sqrt(centroid_lengthNorm);
 		return centroid_lengthNorm;
 	}
+	
+
+	public void normalize() {
+		setCentroid_lengthNorm();
+		for (int i = 0; i < centroid.size(); i++) {
+			centroid.set(i, centroid.get(i)/centroid_lengthNorm);
+		}
+	}
 }

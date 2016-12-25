@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import centroid.Centroid;
+import centroid.Word2VecCentroid;
 import inverted_index.InvertedIndex;
 import node_info.CategoryTree;
 import node_info.NodeInfo;
@@ -275,6 +276,73 @@ public class DocumentParser {
 		// }
 	}
     
+
+	public void makeMergeCentroidWord2Vec(CategoryTree taxonomyTree, String rootId,
+			Map<String, Word2VecCentroid>  centroidMap, Map<String, Word2VecCentroid> mergeCentroidMap) {
+
+		List<String> childList = taxonomyTree.hierarchy.get(rootId);
+		Word2VecCentroid currentCentroid = centroidMap.get(rootId);
+		//System.out.println("This rootId is " + rootId);
+
+		if (childList == null || childList.size() == 0) {
+			
+			mergeCentroidMap.put(rootId, new Word2VecCentroid(currentCentroid.getCentroid()));
+			return;
+		} else {
+			/*** add centroid of a category and children's merge centroids ***/
+			for (String child : childList) {
+				makeMergeCentroidWord2Vec(taxonomyTree, child, centroidMap, mergeCentroidMap);
+			}
+			
+			//already computed after recursion returns
+			currentCentroid = centroidMap.get(rootId);
+			Word2VecCentroid mergeCentroid = new Word2VecCentroid();
+			assert(currentCentroid != null);
+			if (currentCentroid != null) {
+				
+				/*adjust weights : add 0.8 - bigger weight to parent centroid */
+				for (int i =0; i < currentCentroid.getCentroid().size(); i++) {
+					currentCentroid.getCentroid().set(i, currentCentroid.getCentroid().get(i) * 0.9);
+				}
+				mergeCentroid.setCentroid(new ArrayList<Double>(currentCentroid.getCentroid()));
+				mergeCentroid.normalize();
+			}
+			double norm;
+			for (String child : childList) {
+				//Map<String, Double> childCentroid = mergeCentroids.get(child);
+				List<Double> childCentroid = mergeCentroidMap.get(child).getCentroid();
+				norm = mergeCentroidMap.get(child).setCentroid_lengthNorm();
+				
+				/*** merge-centroid calculation by term addition ***/
+				// if(merge_centroid!=null){
+
+				for (int i = 0; i < childCentroid.size(); i++) {
+					 mergeCentroid.getCentroid().set(i, mergeCentroid.getCentroid().get(i) + childCentroid.get(i)/norm);
+					 
+				}
+				//TODO():CHECK IT
+				/*** Normalizing merge - centroids ***/
+				
+				/*double vec_length = 0;
+				for (String vec : mergeCentroid.keySet()) {
+					double tfidf_vec = mergeCentroid.get(vec);
+					vec_length += Math.pow(tfidf_vec, 2);
+				}*/
+				
+				// put Normalized merge - centroids
+				//double numOfCentroids = (currentCentroid == null) ? childList.size() : (childList.size() +1);
+				double numOfCentroids = childList.size() + 1;
+				for (int i = 0; i < mergeCentroid.getCentroid().size(); i++) {
+					mergeCentroid.getCentroid().set(i, mergeCentroid.getCentroid().get(i) / numOfCentroids);
+				}
+				mergeCentroid.normalize(); //- with this, 0,235 macro; 0,314 micro - BUT without weight adjusting for mc and c
+			}
+			mergeCentroidMap.put(rootId, mergeCentroid);
+		}
+
+		// }
+	}
+	
     /**
      * Method to calculate cosine similarity between all the documents.
      */

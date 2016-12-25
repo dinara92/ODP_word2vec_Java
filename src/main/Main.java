@@ -501,6 +501,7 @@ public class Main {
 				
 				if (!assignedCatId.equals(catid)) {
 					//System.out.println("Page id: " + doc.get_id() + " of category " + catid + " was falsely assigned to " + assignedCatId);
+					//HERE CAN MAKE RECURSIVE CONDITION TO CHECK GRAND - GRAND FATHERS
 					if(assignedCatId.equals(testDataNodes.get(catid).getFatherid())){
 						//System.out.println("\tThis page is assigned to its category FATHER!");
 						assignedToFather++;
@@ -1110,7 +1111,10 @@ public class Main {
 		System.out.println("\tNow evaluating");
 		evalCentroids(cosineSimC);
 		
-		/* centroids evaluation */
+		/* m - centroids evaluation */
+		
+		Map<String, Word2VecCentroid> mergeCentroidMap = makeMergeCentroidsWord2Vec(trainDataSetHeuristicsByCateg);
+
 		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
 		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
 		//evalCentroids(cosineSimC);
@@ -1161,6 +1165,36 @@ public class Main {
 			
 		}
 
+	public static void makeMergeCentroidsWord2Vec(Map<String, Word2VecCentroid> centroids, Map<String, NodeInfo> taxonomyAll,
+			Map<String, NodeInfo> testDataSet, Map<String, NodeInfo> vectorsTestDataSet) {
+		/*** Hierarchy ***/
+		long millis = System.currentTimeMillis();
+		DocumentParser dp = new DocumentParser();
+		CategoryTree categoryTree = dp.makeHieararchy(taxonomyAll);
+		Map<String, List<String>> tree = categoryTree.hierarchy;
+		long period = System.currentTimeMillis() - millis;
+		System.out.println("computing hierarchy took " + period + "ms");
+		//System.out.println("children of node 0 are: " + tree.get("0"));*
+		
+		/*** Merge-centroid calculation ***/
+		
+		// Map<String, Double> catMergeCentroid =
+		// dp.makeMergeCentroid(categoryTree, "377116", centroidMap);
+		
+		millis = System.currentTimeMillis();
+		Map<String, Word2VecCentroid> mergeCentroids = new HashMap<String, Word2VecCentroid>();
+		dp.makeMergeCentroidWord2Vec(categoryTree, "0", centroids, mergeCentroids);
+		System.out.println("Merge centroid have " + mergeCentroids.size() + " classes");
+		period = System.currentTimeMillis() - millis;
+		System.out.println("computing merge centroid for root 0 took " + period + "ms");
+		
+		/* merge-centroid evaluation */
+		//Map<String, Word2VecCentroid> mergeCentroidMapHeuristics = applyHeuristicsToCentroids(mergeCentroids, testDataSet);
+		Map<String, List<Integer>> cosineSimMC = computeCosineSimCWord2Vec(vectorsTestDataSet, mergeCentroids);
+		evalCentroids(cosineSimMC);
+		
+	}
+	
 	public static Map<String, NodeInfo> buildTrainSet(Map<String, NodeInfo> taxonomyAll,
 			Map<String, NodeInfo> taxonomyTest) {
 		Map<String, NodeInfo> taxonomyTrain = new HashMap<String, NodeInfo>();
