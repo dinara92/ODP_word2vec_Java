@@ -29,6 +29,10 @@ public class Word2VecCentroid {
 		setCentroid_lengthNorm();
 	}
 	
+	public void setCentroid_noNorm(List<Double> centroid) {
+		this.centroid = centroid;
+	}
+	
 	public double getCentroid_lengthNorm() {
 		return centroid_lengthNorm;
 	}

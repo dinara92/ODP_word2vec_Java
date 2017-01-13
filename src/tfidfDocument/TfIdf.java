@@ -36,6 +36,7 @@ public class TfIdf {
         }
         //return (1 + Math.log(count / (double) totalterms.size()));
         return count / (double) totalterms.size();
+        //return Math.pow((Math.E - 1.7), (count / (double) totalterms.size()));
 
     }
     //</editor-fold>

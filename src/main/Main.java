@@ -25,6 +25,7 @@ import java.util.regex.Pattern;
 import com.mysql.jdbc.PreparedStatement;
 import com.mysql.jdbc.Statement;
 
+import category_node.CategoryNode;
 import centroid.Centroid;
 import centroid.Word2VecCentroid;
 import csv_utils.CSVUtils;
@@ -37,6 +38,7 @@ import page_node.PageNode;
 import testDoc.TestDoc;
 import tfidfDocument.CosineSim;
 import tfidfDocument.DocumentParser;
+import tfidfDocument.TfIdf;
 import utils.StringProcessingUtils;
 
 public class Main {
@@ -393,7 +395,7 @@ public class Main {
 		DocumentParser dp = new DocumentParser();
 		//TestDoc testDoc;
 		for (String catId : taxonomy.keySet()) {
-			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculator2(taxonomy.get(catId).getPages(), invIndex);
+			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(taxonomy.get(catId).getPages(), invIndex);
 			//testDoc = new TestDoc();
 			//testDoc.setTestDoc(tfidfDocsVector);
 			categoryTfidfDocsVectorMap.put(catId, tfidfDocsVector);
@@ -407,7 +409,7 @@ public class Main {
 		Centroid centroidThis;
 		DocumentParser dp = new DocumentParser();
 		for (String catId : taxonomy.keySet()) {
-			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculator2(taxonomy.get(catId).getPages(), invIndex);
+			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(taxonomy.get(catId).getPages(), invIndex);
 			Map<String, Double> catCentroid = dp.makeCentroid(tfidfDocsVector);
 			centroidThis = new Centroid();
 
@@ -430,18 +432,29 @@ public class Main {
 		return centroidMap;
 	}
 	
-	public static Map<String, Word2VecCentroid> computeCentroidsWord2Vec(Map<String, NodeInfo> taxonomy) throws IOException {
+	public static Map<String, Word2VecCentroid> computeCentroidsWord2Vec(Map<String, NodeInfo> taxonomy, InvertedIndex invIndexTrain) throws IOException {
 		int count_categories = 0;
 		Map<String, Word2VecCentroid> centroidMap = new HashMap<String, Word2VecCentroid>();
 		Word2VecCentroid centroidThis;
 		DocumentParser dp = new DocumentParser();
 		List<List<Double>> eachPageVectorsList = new ArrayList<List<Double>>();
 		List<Double> word2vecVector;
+		TfIdf tfIdfClass = new TfIdf();
+		double tf; // term frequency
+		double idf; // inverse document frequency
+		double tf_idf = 0; // term requency inverse document frequency
 		
 		for (String catId : taxonomy.keySet()) {
 			eachPageVectorsList.clear();
 			List<PageNode> pagesInThisCateg = taxonomy.get(catId).getPages();
 			for(PageNode page: pagesInThisCateg) {
+				//from here, multiply each term in page.getTokenizedPage() by word2vecVector- dict.csv - mapping of word to vector
+				/*for (String term : page.getTokenizedPage()) {
+					tf = tfIdfClass.tfCalculator(page.getTokenizedPage(), term);
+					idf = tfIdfClass.idfCalculatorNew(term, invIndexTrain);
+					tf_idf = tf * idf;
+				}*/
+				/****************************************************************************/
 					word2vecVector = page.getWord2VecVectors();
 					eachPageVectorsList.add(word2vecVector);
 			}
@@ -555,6 +568,7 @@ public class Main {
 					//HERE CAN MAKE RECURSIVE CONDITION TO CHECK GRAND - GRAND FATHERS
 					if(assignedCatId.equals(testDataNodes.get(catid).getFatherid())){
 						//System.out.println("\tThis page is assigned to its category FATHER!");
+						//assignedCatId = catid;
 						assignedToFather++;
 					}
 				}
@@ -564,6 +578,8 @@ public class Main {
 				} else {
 					FPMap.put(assignedCatId, 1);
 				}
+				
+				//returnedCatids.add(assignedCatId);
 			}
 			//System.out.println("For category " + catid +  " Assigned catids are : " + returnedCatids);
 			
@@ -1184,6 +1200,45 @@ public class Main {
 		return trainDataSetHeuristicsByCateg;
 	}
 	
+	
+	public static Map<String, CategoryNode> csvCategToHashMap(String csvFile) throws FileNotFoundException{
+		CategoryNode categ;
+		Map<String, CategoryNode> categNode = new HashMap<String, CategoryNode>();
+
+		String currentCategory;
+		
+        Scanner scanner = new Scanner(new File(csvFile));
+        scanner.nextLine();
+        while (scanner.hasNext()) {
+            List<String> line = CSVUtils.parseLine(scanner.nextLine());
+           // System.out.println("Categ [id= " + line.get(0) + ", catid= " + line.get(2) + " , categ_name=" + line.get(1) + "\"" +"]");
+
+            //id	category_name	catid	fatherid	category_vector_300dim
+
+        	categ = new CategoryNode();
+
+        	//currentCategory = line.get(2);
+        	currentCategory = line.get(0);
+
+			//categ.setCatid(line.get(2));
+            //categ.setFatherid(line.get(3));
+            //categ.setTopic(line.get(1));
+
+            //String vector_string = line.get(4);
+            String vector_string = line.get(1);
+
+        	List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(vector_string);
+            //List<String> str_list =stringRepl(vector_string);
+
+        	categ.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
+        	categNode.put(currentCategory, categ);
+
+        }
+        scanner.close();
+
+		return categNode;
+	}
+	
 	public static void runCentroidsFromCSV() throws IOException, SQLException{
 		
 		
@@ -1191,24 +1246,37 @@ public class Main {
 		Map<String, NodeInfo> trainDataSetByCateg = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSet = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSetNew = new HashMap<String, NodeInfo>();
+		Map<String, CategoryNode> categSet = new HashMap<String, CategoryNode>();
+		Map<String, Word2VecCentroid> categVectorMap = new HashMap<String, Word2VecCentroid>();
+		Word2VecCentroid categVector;
+		Word2VecCentroid mergedCategVector;
 
-		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
+		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_en_wiki_syn1.csv";
 		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
-		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/New folder/trainDataVecs_gn+allODPTrain.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/New folder/trainDataVecs_allTrainODPpages_300features_0minwords_10context.csv";
 		//String csvFileTrain_bigSet = "C:/Users/dinaraDILab/word2vec/table_pages_train_bigset.csv"; - this file cannot be opened totally and doesnt have headers
-		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
+		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_en_wiki_syn1.csv";
 		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_csv_file.csv";
-		String csvFileTest = "C:/Users/dinaraDILab/word2vec/New folder/testDataVecs_gn+allODPTrain.csv";
-
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/New folder/testDataVecs_allTrainODPpages_300features_0minwords_10context.csv";
+		String csvFileCategs = "C:/Users/dinaraDILab/word2vec/word2vec_py/ODP_word2vec/hCategoriesLastGramVecs.csv";
+		
+		
+		/*System.out.println("Started read categories from csv");
+		categSet = csvCategToHashMap(csvFileCategs);
+		System.out.println("Finished read categories from csv");*/
+		
 		System.out.println("Started read train data from csv");
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);
-		//trainDataSetByCateg = csvToHashMap(csvFileTrain_bigSet);
 		System.out.println("Finished read train data from csv");
 
 		System.out.println("Started read test data from csv");
 		testDataSet = csvToHashMap(csvFileTest);
 		System.out.println("Finished read test data from csv");
 
+		
+		
 		//System.out.println("Started read big train data from csv");
 		//Map<String, NodeInfo> taxonomyAll = makeTaxonomyAll();
 		//trainDataSetByCateg = buildTrainSet(taxonomyAll, testDataSet);
@@ -1217,22 +1285,54 @@ public class Main {
 		
 		System.out.println("\tNow calculating centroids");
 		//from txt file, will need to read to trainDataSetHeuristics and testDataSetHeuristics data structures
-		//InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
-		//Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
+		Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		/*DocumentParser dp = new DocumentParser();
+		for(String catid: trainDataSetHeuristicsByCateg.keySet()){
+			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(trainDataSetHeuristicsByCateg.get(catid).getPages(), invIndexTrain);
+			System.out.println(tfidfDocsVector);
+		}*/
 		
-		Map<String, Word2VecCentroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg);
+		//Map<String, Word2VecCentroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		/*for (String categ: categSet.keySet()){
+			
+			categVector = new Word2VecCentroid();
+			categVector.setCentroid(categSet.get(categ).getWord2VecVectors());
+			categVectorMap.put(categ, categVector);
+		}
+		
+		Map<String, Word2VecCentroid> mergedMap = new HashMap<String, Word2VecCentroid>();
+		List<Double> mergedListOfDoubles;
+		for(String categ: categVectorMap.keySet()){
+			mergedListOfDoubles = new ArrayList<Double>();
+			//System.out.println("THIS IS categVectorMap SIZE: " +categVectorMap.get(categ).getCentroid().size());
+			//System.out.println("THIS IS centroidMap SIZE: " +centroidMap.get(categ).getCentroid().size());
 
-		testDataSetNew = applyTestHeuristics(testDataSet);
+			for(int i =0; i<categVectorMap.get(categ).getCentroid().size(); i++){
+				double vec1 = categVectorMap.get(categ).getCentroid().get(i);
+				double vec2 = centroidMap.get(categ).getCentroid().get(i);
+
+					double vec_merged = 0.2* (double) vec1 + 0.8* (double) vec2 ;
+					mergedListOfDoubles.add(vec_merged);
+			}
+			//System.out.println("THIS IS SIZE: " + mergedListOfDoubles.size());
+
+			mergedCategVector = new Word2VecCentroid();
+			mergedCategVector.setCentroid(mergedListOfDoubles);
+			mergedMap.put(categ, mergedCategVector);
+		}*/
 		
-		//Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSetNew);
+		//testDataSetNew = applyTestHeuristics(testDataSet);
+		
+		Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSet);
 		
 		/* centroids evaluation */
 		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
-		System.out.println("\tNow computing cosine similarity");
-		Map<String, List<Integer>> cosineSimC = computeCosineSimCWord2Vec(testDataSetNew, centroidMap);
-		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
+		//System.out.println("\tNow computing cosine similarity");
+		//Map<String, List<Integer>> cosineSimC = computeCosineSimCWord2Vec(testDataSet, categVectorMap);
+		Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
 
-		System.out.println("\tNow evaluating");
+		//System.out.println("\tNow evaluating");
 		evalCentroids(cosineSimC);
 		/******************************Centroids done*****************************/
 		
@@ -1544,12 +1644,12 @@ public class Main {
 			
 		}
 		
-		public static Map<String, Word2VecCentroid> runCentroidsWord2VecPart(Map<String, NodeInfo> trainDataSet) throws IOException {
+		public static Map<String, Word2VecCentroid> runCentroidsWord2VecPart(Map<String, NodeInfo> trainDataSet, InvertedIndex invIndexTrain) throws IOException {
 			long millis;
 			long period = 0;
 			
 			millis = System.currentTimeMillis();
-			Map<String, Word2VecCentroid> centroidMap = computeCentroidsWord2Vec(trainDataSet);
+			Map<String, Word2VecCentroid> centroidMap = computeCentroidsWord2Vec(trainDataSet, invIndexTrain);
 
 			period = System.currentTimeMillis() - millis;
 			System.out.println("computing centroids took " + period + "ms");

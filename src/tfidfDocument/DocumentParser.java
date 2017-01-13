@@ -66,7 +66,72 @@ public class DocumentParser {
 		return tfidfDocsMap;
 	}
 
-	
+	public List<Map<String, Double>> tfIdfCalculatorTopWord(List<PageNode> pages, InvertedIndex index)
+			throws IOException {
+		double tf; // term frequency
+		double idf; // inverse document frequency
+		double tf_idf = 0; // term requency inverse document frequency
+		TfIdf tfIdfClass = new TfIdf();
+		List<Map<String, Double>> tfidfDocsMap = new ArrayList<Map<String, Double>>();
+
+		for (PageNode page : pages) {
+			// System.out.println("Now calculating each docTermsArray for " +
+			// docTermsArray.toString() + " with size " + docTermsArray.size());
+			//System.out.println("calculating tfidf for " + docTermsArray);
+			Map<String, Double> tfidfMap = new HashMap<String, Double>();
+
+			for (String term : page.getTokenizedPage()) {
+				tf = tfIdfClass.tfCalculator(page.getTokenizedPage(), term);
+				idf = tfIdfClass.idfCalculatorNew(term, index);
+				tf_idf = tf * idf;
+				// vec_length = Math.pow(tfidfvectors[count], 2);
+				/*** Normalize vectors ***/
+				// TODO: normalize vectors, incorrect now
+				// tfidfMap.put(term, tf_idf/(Math.sqrt(vec_length)));
+				tfidfMap.put(term, tf_idf);
+			}
+			/***  Selecting top-k term vectors ***/
+			List<Double> topVecs = new ArrayList<Double>();
+			Map<String, Double> topVecsMap = new HashMap<String, Double>();
+			
+			for (String term : tfidfMap.keySet()) {
+				topVecs.add(tfidfMap.get(term));
+			}
+			Collections.sort(topVecs, Collections.reverseOrder());
+			//System.out.println("Map size before: " + tfidfMap.size());
+			for(int i = 0; i < topVecs.size(); i++){
+			//System.out.println("List of doubles for page # :" + page.get_id() + ": " + topVecs.get(i) + " of size " + topVecs.size());
+				if(topVecs.get(i) > 0.1)
+				{
+					double topv = topVecs.get(i);
+					//System.out.println("List of doubles for page # :" + page.get_id() + ": " + topVecs.get(i) + " of size " + topVecs.size());
+					for(String term: tfidfMap.keySet()){
+						if(topv==tfidfMap.get(term))
+							topVecsMap.put(term, tfidfMap.get(term));
+					}
+				}
+			}
+			//System.out.println("Map size after: " + topVecsMap.size());
+
+			/*** ***************************** ***/
+			
+			/*** Normalizing vectors ***/
+			double vec_length = 0;
+			for (String vec : topVecsMap.keySet()) {
+				double tfidf_vec = topVecsMap.get(vec);
+				vec_length += Math.pow(tfidf_vec, 2);
+			}
+			double norm = Math.sqrt(vec_length);
+			// put Normalized vectors
+			for (String term : topVecsMap.keySet()) {
+				topVecsMap.put(term, topVecsMap.get(term) / (double)(norm));
+			}
+			/*** ***************** ***/
+			
+			tfidfDocsMap.add(topVecsMap);
+		}
+		return tfidfDocsMap;
+	}
 	
 	public Map<String, Double> makeCentroid(List<Map<String, Double>> tfidfDocsMap) {
 		Map<String, Double> centroid = new HashMap<String, Double>();
