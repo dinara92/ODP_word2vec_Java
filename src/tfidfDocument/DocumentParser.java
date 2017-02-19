@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import category_node.CategoryNode;
 import centroid.Centroid;
 import centroid.Word2VecCentroid;
 import inverted_index.InvertedIndex;
@@ -43,7 +44,8 @@ public class DocumentParser {
 				idf = tfIdfClass.idfCalculatorNew(term, index);
 				tf_idf = tf * idf;
 				// vec_length = Math.pow(tfidfvectors[count], 2);
-				/*** Normalize vectors ***/
+				/*** Normalize vecto
+				 * rs ***/
 				// TODO: normalize vectors, incorrect now
 				// tfidfMap.put(term, tf_idf/(Math.sqrt(vec_length)));
 				tfidfMap.put(term, tf_idf);
@@ -131,6 +133,44 @@ public class DocumentParser {
 			tfidfDocsMap.add(topVecsMap);
 		}
 		return tfidfDocsMap;
+	}
+	
+	public Map<String, List<List<Double>>> tfIdfMultByWordEmb(List<PageNode> pages, InvertedIndex index, Map<String, CategoryNode> wordEmbVocab)
+			throws IOException {
+		double tf; // term frequency
+		double idf; // inverse document frequency
+		double tf_idf = 0; // term frequency inverse document frequency
+		TfIdf tfIdfClass = new TfIdf();
+		List<List<Double>> tfidfList = null;
+		Map<String, List<List<Double>>> onePageVectors = new HashMap<String, List<List<Double>>>();
+
+		for (PageNode page : pages) {
+			//tfidfList.clear();
+			tfidfList = new ArrayList<List<Double>>();
+
+			for (String term : page.getTokenizedPage()) {
+				tf = tfIdfClass.tfCalculator(page.getTokenizedPage(), term);
+				idf = tfIdfClass.idfCalculatorNew(term, index);
+				tf_idf = tf * idf;
+				List<Double> multipliedVecs = new ArrayList<Double>();
+				/*if(!wordEmbVocab.containsKey(term)){
+					System.out.println("DOES NOT CONTAIN THIS TERM " + term);
+					System.out.println("From this page: " + page.getTokenizedPage());
+				}
+				else if(wordEmbVocab.containsKey(term)){
+					System.out.println("HAS THIS TERM " + term);
+				}*/
+				for (double vec : wordEmbVocab.get(term).getWord2VecVectors())
+				{
+					multipliedVecs.add(tf_idf*vec);
+				}
+				
+				tfidfList.add(multipliedVecs);
+			}
+			onePageVectors.put(page.get_id(), tfidfList);
+		}
+		return onePageVectors;
+	
 	}
 	
 	public Map<String, Double> makeCentroid(List<Map<String, Double>> tfidfDocsMap) {
@@ -350,7 +390,11 @@ public class DocumentParser {
 		//System.out.println("This rootId is " + rootId);
 
 		if (childList == null || childList.size() == 0) {
-			
+			if (currentCentroid == null) {
+				System.out.println("current centroid from category " + rootId + " is nulls");
+				mergeCentroidMap.put(rootId, Word2VecCentroid.EMPTY);
+				return;
+			}
 			mergeCentroidMap.put(rootId, new Word2VecCentroid(currentCentroid.getCentroid()));
 			return;
 		} else {
@@ -363,11 +407,11 @@ public class DocumentParser {
 			currentCentroid = centroidMap.get(rootId);
 			Word2VecCentroid mergeCentroid = new Word2VecCentroid();
 			assert(currentCentroid != null);
-			if (currentCentroid != null) {
+			if (currentCentroid != null && currentCentroid != Word2VecCentroid.EMPTY) {
 				
 				/*adjust weights : add 0.8 - bigger weight to parent centroid */
 				for (int i =0; i < currentCentroid.getCentroid().size(); i++) {
-					currentCentroid.getCentroid().set(i, currentCentroid.getCentroid().get(i) * 0.9);
+					currentCentroid.getCentroid().set(i, currentCentroid.getCentroid().get(i) * 0.8);
 				}
 				mergeCentroid.setCentroid(new ArrayList<Double>(currentCentroid.getCentroid()));
 				mergeCentroid.normalize();
@@ -375,16 +419,27 @@ public class DocumentParser {
 			double norm;
 			for (String child : childList) {
 				//Map<String, Double> childCentroid = mergeCentroids.get(child);
-				List<Double> childCentroid = mergeCentroidMap.get(child).getCentroid();
+				Word2VecCentroid childCentroid = mergeCentroidMap.get(child);
+				if (childCentroid == Word2VecCentroid.EMPTY) {
+					System.out.println("empty child centroid for category "+ child + ", skipping..");
+					continue;
+				}
+				List<Double> childCentroidList = mergeCentroidMap.get(child).getCentroid();
 				norm = mergeCentroidMap.get(child).setCentroid_lengthNorm();
 				
 				/*** merge-centroid calculation by term addition ***/
 				// if(merge_centroid!=null){
 
-				for (int i = 0; i < childCentroid.size(); i++) {
-					 mergeCentroid.getCentroid().set(i, mergeCentroid.getCentroid().get(i) + childCentroid.get(i)/norm);
-					 
+				if (mergeCentroid != Word2VecCentroid.EMPTY && mergeCentroid.getCentroid().size() == childCentroidList.size()) {
+					System.out.println("merge centroid size is " + mergeCentroid.getCentroid().size());
+					System.out.println("child centroid list size is " + childCentroidList.size());
+					for (int i = 0; i < childCentroidList.size(); i++) {
+						mergeCentroid.getCentroid().set(i, mergeCentroid.getCentroid().get(i) * 0.8 + childCentroidList.get(i) * 0.2 /norm);
+					}
+				} else {
+					System.out.println("empty merge centroid for child category " + child + ", breaking..");
 				}
+
 				//TODO():CHECK IT
 				/*** Normalizing merge - centroids ***/
 				

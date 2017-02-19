@@ -39,6 +39,7 @@ import testDoc.TestDoc;
 import tfidfDocument.CosineSim;
 import tfidfDocument.DocumentParser;
 import tfidfDocument.TfIdf;
+import utils.CharUtils;
 import utils.StringProcessingUtils;
 
 public class Main {
@@ -237,6 +238,56 @@ public class Main {
 		return heuristicTaxonomy;
 	}
 	
+	public static Map<String, NodeInfo> applyHeuristicsWorld(Map<String, List<String>> categoryTaxonomy,
+			Map<String, List<PageNode>> pageTaxonomy, Map<String, NodeInfo> taxonomyAll) {
+		
+		Map<String, NodeInfo> heuristicTaxonomy = new HashMap<String, NodeInfo>();
+		NodeInfo node  = null;
+		for (String key_catid_in_page : categoryTaxonomy.keySet()) {
+			/*
+			if (!pageTaxonomy.containsKey(key_catid_in_page)) {
+				// node.setCatid("this catid does not exist");
+				System.out.println("No catid in category taxonomy: " + key_catid_in_page);
+				continue;
+			}
+			*/
+			
+			List<PageNode> catPages = pageTaxonomy.get(key_catid_in_page);
+			if (catPages == null) {
+				catPages = Collections.emptyList();
+			}
+			
+
+			/* ************** HEURISTICS1 ***************** */
+			if (!(categoryTaxonomy.get(key_catid_in_page).get(0).contains("Top/World"))){
+			
+				
+
+				node = taxonomyAll.get(key_catid_in_page);
+				if (node == null || node.getPages() == null || node.getPages().size() == 0) {
+					for (PageNode doc : catPages) {
+						List<String> tokenizedDoc = StringProcessingUtils.removeStemmedStopWords(doc.getDescription());
+						doc.setTokenizedPage(tokenizedDoc);
+						// since page strings are tokenized, no need to keep whole
+						//doc.setDescription(null);
+					}
+					node.setPages(catPages);
+					node.setCategory_topic(categoryTaxonomy.get(key_catid_in_page).get(0));
+					node.setFatherid(categoryTaxonomy.get(key_catid_in_page).get(1));
+				}
+				// node.setPages(pageTaxonomy.get(key_catid_in_page));
+				// collectionOfPages.addAll(node.getPages());
+
+				heuristicTaxonomy.put(key_catid_in_page, node);
+				}
+				
+				
+		}
+		return heuristicTaxonomy;
+	}
+	
+
+	
 	public static Map<String, NodeInfo> applySmallSizeHeuristics(Map<String, List<String>> categoryTaxonomy,
 			Map<String, List<PageNode>> pageTaxonomy,  Map<String, NodeInfo> taxonomyAll) {
 		Map<String, NodeInfo> taxonomy = new HashMap<String, NodeInfo>();
@@ -316,6 +367,90 @@ public class Main {
 		return heuristicTaxonomy;
 	}
 	
+	public static Map<String, CategoryNode> csvCategToHashMap_OnlyTopics(String csvFile) throws FileNotFoundException{
+		CategoryNode categ;
+		Map<String, CategoryNode> categNode = new HashMap<String, CategoryNode>();
+
+		String currentCategory;
+		
+        Scanner scanner = new Scanner(new File(csvFile));
+        //scanner.nextLine();
+        while (scanner.hasNext()) {
+            List<String> line = CSVUtils.parseLine(scanner.nextLine());
+           // System.out.println("Categ [id= " + line.get(0) + ", catid= " + line.get(2) + " , categ_name=" + line.get(1) + "\"" +"]");
+
+          	categ = new CategoryNode();
+        	currentCategory = line.get(2);
+
+			categ.setCatid(line.get(2));
+            categ.setFatherid(line.get(3));
+            categ.setTopic(line.get(1));
+
+            System.out.println(categ.getTopic());
+            
+        	categNode.put(currentCategory, categ);
+
+        }
+        scanner.close();
+
+		return categNode;
+	}
+	
+	public static int characterCount(String s) {
+		
+		int counter = 0;
+		for( int i=0; i<s.length(); i++ ) 
+		    if( s.charAt(i) == '/' ) 
+		        counter++;
+		return counter;
+		    
+	}
+
+	
+	public static Map<String, NodeInfo> applyTestHeuristicsLowerNodes(Map<String, NodeInfo> taxonomy, Map<String, CategoryNode> categories) {
+		Map<String, NodeInfo> heuristicTaxonomy = new HashMap<String, NodeInfo>();
+		NodeInfo node  = null;
+		int categoryLevel;
+		for (String key_catid_in_page : taxonomy.keySet()) {
+			/*
+			if (!pageTaxonomy.containsKey(key_catid_in_page)) {
+				// node.setCatid("this catid does not exist");
+				System.out.println("No catid in category taxonomy: " + key_catid_in_page);
+				continue;
+			}
+			*/
+			
+			List<PageNode> catPages = taxonomy.get(key_catid_in_page).getPages();
+			if (catPages == null) {
+				catPages = Collections.emptyList();
+			}
+			
+			categoryLevel = characterCount(categories.get(key_catid_in_page).getTopic());
+			
+				/* ************** new heuristics ***************** */
+				if (categoryLevel > 4) {
+			
+				node = taxonomy.get(key_catid_in_page);
+				if (node == null || node.getPages() == null || node.getPages().size() == 0) {
+					//System.out.println("Warning!!! Category " + key_catid_in_page + " isn't in taxonomyAll ");
+					for (PageNode doc : catPages) {
+						List<String> tokenizedDoc = StringProcessingUtils.removeStemmedStopWords(doc.getDescription());
+						doc.setTokenizedPage(tokenizedDoc);
+
+					}
+					node.setPages(catPages);
+					//node.setCategory_topic(categoryTaxonomy.get(key_catid_in_page).get(0));
+					//node.setFatherid(categoryTaxonomy.get(key_catid_in_page).get(1));
+				}
+				// node.setPages(pageTaxonomy.get(key_catid_in_page));
+
+				heuristicTaxonomy.put(key_catid_in_page, node);
+				}
+
+		}
+		return heuristicTaxonomy;
+	}
+	
 	public static Map<String, NodeInfo> applyNoHeuristics(Map<String, List<String>> categoryTaxonomy,
 			Map<String, List<PageNode>> pageTaxonomy) {
 		Map<String, NodeInfo> taxonomyAll = new HashMap<String, NodeInfo>();
@@ -332,6 +467,7 @@ public class Main {
 				doc.setTokenizedPage(tokenizedDoc);
 				doc.setDescription(null);
 				//page_terms.add(tokenizedDoc);
+				doc.setPage_link(doc.getPage_link());
 			}
 			node.setPages(catPages);
 			node.setCategory_topic(categoryTaxonomy.get(key_catid_in_page).get(0));
@@ -395,7 +531,7 @@ public class Main {
 		DocumentParser dp = new DocumentParser();
 		//TestDoc testDoc;
 		for (String catId : taxonomy.keySet()) {
-			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(taxonomy.get(catId).getPages(), invIndex);
+			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculator2(taxonomy.get(catId).getPages(), invIndex);
 			//testDoc = new TestDoc();
 			//testDoc.setTestDoc(tfidfDocsVector);
 			categoryTfidfDocsVectorMap.put(catId, tfidfDocsVector);
@@ -409,7 +545,7 @@ public class Main {
 		Centroid centroidThis;
 		DocumentParser dp = new DocumentParser();
 		for (String catId : taxonomy.keySet()) {
-			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(taxonomy.get(catId).getPages(), invIndex);
+			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculator2(taxonomy.get(catId).getPages(), invIndex);
 			Map<String, Double> catCentroid = dp.makeCentroid(tfidfDocsVector);
 			centroidThis = new Centroid();
 
@@ -439,25 +575,19 @@ public class Main {
 		DocumentParser dp = new DocumentParser();
 		List<List<Double>> eachPageVectorsList = new ArrayList<List<Double>>();
 		List<Double> word2vecVector;
-		TfIdf tfIdfClass = new TfIdf();
-		double tf; // term frequency
-		double idf; // inverse document frequency
-		double tf_idf = 0; // term requency inverse document frequency
-		
+		//Map<String, List<List<Double>>> tfidfEmbedPagesMap = new HashMap<String, List<List<Double>>>();
+		/*** If want to test tfidf*word vector, use this map instead! ***/
+		//tfidfEmbedPagesMap = tfidfEmbedPages(taxonomy, invIndexTrain);
+
 		for (String catId : taxonomy.keySet()) {
+			
 			eachPageVectorsList.clear();
 			List<PageNode> pagesInThisCateg = taxonomy.get(catId).getPages();
 			for(PageNode page: pagesInThisCateg) {
-				//from here, multiply each term in page.getTokenizedPage() by word2vecVector- dict.csv - mapping of word to vector
-				/*for (String term : page.getTokenizedPage()) {
-					tf = tfIdfClass.tfCalculator(page.getTokenizedPage(), term);
-					idf = tfIdfClass.idfCalculatorNew(term, invIndexTrain);
-					tf_idf = tf * idf;
-				}*/
-				/****************************************************************************/
 					word2vecVector = page.getWord2VecVectors();
 					eachPageVectorsList.add(word2vecVector);
 			}
+			//eachPageVectorsList = tfidfEmbedPagesMap.get(catId);
 			List<Double> catCentroid = dp.makeCentroidWord2Vec(eachPageVectorsList);
 			centroidThis = new Word2VecCentroid();
 
@@ -551,6 +681,7 @@ public class Main {
 		int current_miss_countFN = 0;
 		String assignedCatId;
 		int assignedToFather = 0;
+		int count_right = 0;
 		
 		for(String catid : testDataNodes.keySet()) {
 			returnedCatids.clear();
@@ -564,13 +695,19 @@ public class Main {
 				returnedCatids.add(assignedCatId);
 				
 				if (!assignedCatId.equals(catid)) {
-					//System.out.println("Page id: " + doc.get_id() + " of category " + catid + " was falsely assigned to " + assignedCatId);
+					//if(doc.get_id().equals("529330") || doc.get_id().equals("557082") || doc.get_id().equals("557086") || doc.get_id().equals("1824884") || doc.get_id().equals("406829"))
+						//System.out.println("Page id: " + doc.get_id() + " of category " + catid + " was falsely assigned to " + assignedCatId);
 					//HERE CAN MAKE RECURSIVE CONDITION TO CHECK GRAND - GRAND FATHERS
 					if(assignedCatId.equals(testDataNodes.get(catid).getFatherid())){
 						//System.out.println("\tThis page is assigned to its category FATHER!");
 						//assignedCatId = catid;
 						assignedToFather++;
 					}
+				}
+				else
+				{
+					//System.out.println("Page id: " + doc.get_id() + " of category " + catid + " was truly assigned to " + assignedCatId);
+					count_right++;
 				}
 				
 				if (FPMap.containsKey(assignedCatId)) {
@@ -602,7 +739,7 @@ public class Main {
 		//else System.out.println("Too small test set");
 		}
 		
-		
+		System.out.println("Total right guesses - TP: " + count_right);
 		System.out.println("\tTotal these number of docs were assigned to FATHER of its category: " + assignedToFather);
 		for(String catid : FPMap.keySet()) {
 			if(returnedCatidsMapTpFnFp.containsKey(catid)){ //because of the below comment, added this condition
@@ -856,33 +993,55 @@ public class Main {
 
 	}
 	
-	public static void saveHeuristicsCategoriesToDB(Map<String, NodeInfo> taxonomyAllHeuristics) throws SQLException{
+	
+	public static void saveHeuristicsCategoriesToDB(Map<String, NodeInfo> taxonomyAllHeuristics) throws SQLException, FileNotFoundException{
+		
+		//FILE for all categories
+				PrintStream allCategoriesClean = new PrintStream(new FileOutputStream(
+				          "allCategories_WorldReg_removed.txt"));
 		
 		ConnectDb.initPropertiesForSave();
 		final boolean dbConnected2 = ConnectDb.checkConnection();
 		if (!dbConnected2) {
 			System.exit(1);
 		}
-		
+		int id = 0;
+
 		System.out.println("Successfully connected to " + ConnectDb.getEngine().toUpperCase() + " database "
 				+ ConnectDb.getDB() + "@" + ConnectDb.getHost() + " as user " + ConnectDb.getUsername());
 		PreparedStatement statement_save;
 		
 		for(String catid : taxonomyAllHeuristics.keySet()){
 		        		
-		        		String query_set_heuristics_categories = "INSERT INTO dmoz_categories_all (topic, catid, fatherid)"
+		        		String query_set_heuristics_categories = "INSERT INTO dmoz_categories_world_reg_removed (topic, catid, fatherid)"
 		        		        + " values (?, ?, ?);";
 		
 		        		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_heuristics_categories);
-		        		statement_save.setString(1,taxonomyAllHeuristics.get(catid).getCategory_topic());
+		        			//System.out.println("\tBelow string contains ?");
+		        			System.out.println(taxonomyAllHeuristics.get(catid).getCategory_topic());
+			        		CharUtils.change(taxonomyAllHeuristics.get(catid).getCategory_topic());
+
+		        		String validCategoryString = CharUtils.change(taxonomyAllHeuristics.get(catid).getCategory_topic());;
+		        		
+
+		        		statement_save.setString(1,validCategoryString);
 		        		statement_save.setString(2, catid);
 		        		statement_save.setString(3, taxonomyAllHeuristics.get(catid).getFatherid());
 		
 		        		statement_save.executeUpdate();
+		        		allCategoriesClean.println(taxonomyAllHeuristics.get(catid).getCategory_topic());
+		        		id+=1;
 		        
 		        }
+		System.out.println("Number of rows should be added to categories: " + id);
+
 		//UNCOMMENT TO COMMIT
-        //ConnectDb.getConnection().commit();
+        ConnectDb.getConnection().commit();
+        allCategoriesClean.close();
+        
+        File file_test_categ =new File("C:/Users/dinaraDILab/java_projects/ODP-Word2Vec/allCategories_WorldReg_removed.txt");
+
+		lineNumberReader(file_test_categ);
 	
 	}
 	
@@ -1063,9 +1222,20 @@ public class Main {
         int id = 0;
 		//FILES for training and testing pages
 		
-		//PrintStream trainPages_bigSet = new PrintStream(new FileOutputStream(
-		          //"allTrainPagesODP.txt"));
+	//PrintStream trainPages_bigSet = new PrintStream(new FileOutputStream(
+		          //"dmoz_pages_train_mc_regional.txt"));
 		
+		
+        ConnectDb.initPropertiesForSave();
+		final boolean dbConnected = ConnectDb.checkConnection();
+		if (!dbConnected) {
+			System.exit(1);
+		}
+
+		System.out.println("Successfully connected to " + ConnectDb.getEngine().toUpperCase() + " database "
+				+ ConnectDb.getDB() + "@" + ConnectDb.getHost() + " as user " + ConnectDb.getUsername());
+
+		PreparedStatement statement_save;
 		
         for(String catid : taxonomy.keySet()){
         	
@@ -1075,20 +1245,30 @@ public class Main {
         		String tokenizedPage = Arrays.toString(page.getTokenizedPage().toArray());
         		id = id+1;
         		
-        		
+        		String query_set_train_pages = "INSERT INTO dmoz_pages_train_mc_regional (pages, catid, fatherid, pageid)"
+        		        + " values (?, ?, ?, ?);";
+
+        		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_train_pages);
+        		statement_save.setString(1,tokenizedPage);
+        		statement_save.setString(2, catid);
+        		statement_save.setString(3, taxonomy.get(catid).getFatherid());
+        		statement_save.setString(4, page.get_id());
+
+        		//statement_save.executeUpdate();
         		//trainPages_bigSet.println(tokenizedPage);
 
         	}
         	
         }	
-		//UNSELECT TO COMMIT
+        //UNSELECT TO COMMIT
+        ConnectDb.getConnection().commit();
         //trainPages_bigSet.close();
 		
-		System.out.println("Number of rows should be added to trainPages_bigSet: " + id);
+		System.out.println("Number of rows should be added to trainPages_mc: " + id);
 		
-		File file_trainPages_bigSet =new File("C:/Users/dinaraDILab/java_projects/ODP-Word2Vec/allTrainPagesODP.txt");
+		//File file_trainPages_bigSet =new File("C:/Users/dinaraDILab/java_projects/ODP-Word2Vec/dmoz_pages_train_no_world_only.txt");
 
-		lineNumberReader(file_trainPages_bigSet);
+		//lineNumberReader(file_trainPages_bigSet);
 
 	
 }
@@ -1217,18 +1397,16 @@ public class Main {
 
         	categ = new CategoryNode();
 
-        	//currentCategory = line.get(2);
-        	currentCategory = line.get(0);
+        	currentCategory = line.get(2);
 
-			//categ.setCatid(line.get(2));
-            //categ.setFatherid(line.get(3));
-            //categ.setTopic(line.get(1));
+			categ.setCatid(line.get(2));
+            categ.setFatherid(line.get(3));
+            categ.setTopic(line.get(1));
 
-            //String vector_string = line.get(4);
-            String vector_string = line.get(1);
+            String vector_string = line.get(4);
 
-        	List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(vector_string);
-            //List<String> str_list =stringRepl(vector_string);
+        	//List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(vector_string);
+            List<String> str_list =stringRepl(vector_string);
 
         	categ.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
         	categNode.put(currentCategory, categ);
@@ -1239,6 +1417,68 @@ public class Main {
 		return categNode;
 	}
 	
+	public static Map<String, CategoryNode> csvCategToHashMapLastGram(String csvFile) throws FileNotFoundException{
+		CategoryNode categ;
+		Map<String, CategoryNode> categNode = new HashMap<String, CategoryNode>();
+
+		String currentCategory;
+		
+        Scanner scanner = new Scanner(new File(csvFile));
+        //scanner.nextLine();
+        while (scanner.hasNext()) {
+            List<String> line = CSVUtils.parseLine(scanner.nextLine());
+           // System.out.println("Categ [id= " + line.get(0) + ", catid= " + line.get(2) + " , categ_name=" + line.get(1) + "\"" +"]");
+
+            //id	category_name	catid	fatherid	category_vector_300dim
+
+        	categ = new CategoryNode();
+        	currentCategory = line.get(0);
+
+            String vector_string = line.get(1);
+
+        	//List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(vector_string);
+            List<String> str_list =stringRepl(vector_string);
+
+        	categ.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
+        	categNode.put(currentCategory, categ);
+
+        }
+        scanner.close();
+
+		return categNode;
+	}
+	
+	public static void combineCategAndDocToString (Map<String, CategoryNode> categSet, Map<String, NodeInfo> trainData) throws FileNotFoundException{
+		
+		 int id = 0;
+			//FILES for training and testing pages
+			
+			/*PrintStream file = new PrintStream(new FileOutputStream(
+			          "categAndTestPageCombined.txt"));*/
+		 
+		for(String catid : trainData.keySet()){
+			List<PageNode> pages = trainData.get(catid).getPages();
+			List<String> categ_words = new ArrayList<String>(StringProcessingUtils.tokenizeCategory(categSet.get(catid).getTopic()));
+			categ_words.remove(0);
+			for(PageNode page : pages){
+				List<String> page_words = page.getTokenizedPage();
+				List<String> listFinal = new ArrayList<String>();
+				listFinal.addAll(categ_words);
+				listFinal.addAll(page_words);
+				//System.out.println("\tHere is merged list : " + listFinal);
+				//file.println(listFinal);
+				id+=1;
+				
+			}
+			
+		}
+		
+		//file.close();
+		System.out.println("Number of rows should be added to the file: " + id);
+	}
+
+
+
 	public static void runCentroidsFromCSV() throws IOException, SQLException{
 		
 		
@@ -1247,58 +1487,98 @@ public class Main {
 		Map<String, NodeInfo> testDataSet = new HashMap<String, NodeInfo>();
 		Map<String, NodeInfo> testDataSetNew = new HashMap<String, NodeInfo>();
 		Map<String, CategoryNode> categSet = new HashMap<String, CategoryNode>();
+		Map<String, CategoryNode> categSet2 = new HashMap<String, CategoryNode>();
 		Map<String, Word2VecCentroid> categVectorMap = new HashMap<String, Word2VecCentroid>();
+		Map<String, Word2VecCentroid> categVectorMap2 = new HashMap<String, Word2VecCentroid>();
 		Word2VecCentroid categVector;
 		Word2VecCentroid mergedCategVector;
-
-		String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
-		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_en_wiki_syn1.csv";
-		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_csv_file.csv";
+		
+		//String dmoz_4heuristics_categories = "C:/Users/dinaraDILab/word2vec/dmoz_categories_all.csv";
+		
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/categAndTrainPageCombined_doc_vecs.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainOutVecs_allPagesODP.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/word2vec_py/ODP_word2vec/trainDataVecs_allODPpages_300features_0minwords_10context.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/word2vec_py/ODP_word2vec/trainDataVecs_allODPpages_300features_0minwords_10context.csv";
 		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/New folder/trainDataVecs_allTrainODPpages_300features_0minwords_10context.csv";
 		//String csvFileTrain_bigSet = "C:/Users/dinaraDILab/word2vec/table_pages_train_bigset.csv"; - this file cannot be opened totally and doesnt have headers
-		String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
-		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_en_wiki_syn1.csv";
-		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_csv_file.csv";
-		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/New folder/testDataVecs_allTrainODPpages_300features_0minwords_10context.csv";
-		String csvFileCategs = "C:/Users/dinaraDILab/word2vec/word2vec_py/ODP_word2vec/hCategoriesLastGramVecs.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TrainDocs_OutputVecs.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainMCOut_50f_allPagesODP.csv";
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TrainDocs.csv";
+
+		//String csvFileTrain = "/home/dinara/word2vec/word2vec_gensim_ODP/csv_files/dmoz_pages_all_no_world_only_TrainDocs.csv";
+		//String csvFileTrain = "/media/dinara/7698B11498B0D3B9/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TrainDocs_OutputVecs.csv";
 		
+		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/new_bigram_phrase_dmoz_pages_all_no_world_only_TrainDocs_OutputVecs.csv";
+
+		
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/TestPageCombined_doc_vecs.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testOutVecs_allPagesODP.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/word2vec_py/ODP_word2vec/testDataVecs_allODPpages_300features_0minwords_10context.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/New folder/testDataVecs_allTrainODPpages_300features_0minwords_10context.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TestDocs_OutputVecs.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/testMCOut_50f_allPagesODP.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/new_bigram_phrase_dmoz_pages_all_no_world_only_TestDocs_OutputVecs.csv";
+		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TestDocs.csv";
+		//String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/csv_files/dmoz_pages_all_no_world_only_TestDocs.csv";
+		String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/test_csv/testVecs_testfile.csv";
+		
+		//String csvFileCategs = "C:/Users/dinaraDILab/word2vec/odpCategs_allODP.csv";
+		//String csvFileCategs = "C:/Users/dinaraDILab/word2vec/categs_allODP+categs_phrase4.csv";
+		//String csvFileCategsLastGram = "C:/Users/dinaraDILab/word2vec/dict_featureVecs.csv";
+
+		String test = "father, fathers, fathered";
+		List<String> test_stemmed = StringProcessingUtils.removeStemmedStopWords(test);
+		System.out.println("Here is stemmed string: " + test_stemmed);
 		
 		/*System.out.println("Started read categories from csv");
 		categSet = csvCategToHashMap(csvFileCategs);
 		System.out.println("Finished read categories from csv");*/
 		
-		System.out.println("Started read train data from csv");
+		/*System.out.println("Started read categories from csv");
+		categSet2 = csvCategToHashMapLastGram(csvFileCategsLastGram);
+		System.out.println("Finished read categories from csv");*/
+		
+		//System.out.println("Started read categories from csv");
+		//categSet = csvCategToHashMap_OnlyTopics(dmoz_4heuristics_categories);
+		//System.out.println("Finished read categories from csv");
+		
+		/*System.out.println("Started read train data from csv");
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);
-		System.out.println("Finished read train data from csv");
+		System.out.println("Finished read train data from csv");*/
 
 		System.out.println("Started read test data from csv");
 		testDataSet = csvToHashMap(csvFileTest);
 		System.out.println("Finished read test data from csv");
 
-		
-		
 		//System.out.println("Started read big train data from csv");
 		//Map<String, NodeInfo> taxonomyAll = makeTaxonomyAll();
 		//trainDataSetByCateg = buildTrainSet(taxonomyAll, testDataSet);
 		//System.out.println("Finished read big train data from csv");
 
+		//combineCategAndDocToString(categSet, testDataSet);
+		//saveHeuristicsCategoriesToDB(taxonomyAll);
 		
 		System.out.println("\tNow calculating centroids");
 		//from txt file, will need to read to trainDataSetHeuristics and testDataSetHeuristics data structures
 		InvertedIndex invIndexTrain = invertedIndexTrainData(trainDataSetHeuristicsByCateg);
-		Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
-		/*DocumentParser dp = new DocumentParser();
-		for(String catid: trainDataSetHeuristicsByCateg.keySet()){
-			List<Map<String, Double>> tfidfDocsVector = dp.tfIdfCalculatorTopWord(trainDataSetHeuristicsByCateg.get(catid).getPages(), invIndexTrain);
-			System.out.println(tfidfDocsVector);
-		}*/
+		//Map<String, Centroid> centroidMap = runCentroidsPart(trainDataSetHeuristicsByCateg, invIndexTrain);
 		
-		//Map<String, Word2VecCentroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		Map<String, Word2VecCentroid> centroidMap = runCentroidsWord2VecPart(trainDataSetHeuristicsByCateg, invIndexTrain);
+		
 		/*for (String categ: categSet.keySet()){
 			
 			categVector = new Word2VecCentroid();
 			categVector.setCentroid(categSet.get(categ).getWord2VecVectors());
 			categVectorMap.put(categ, categVector);
+		}
+		
+		for (String categ: categSet2.keySet()){
+					
+			categVector = new Word2VecCentroid();
+			categVector.setCentroid(categSet2.get(categ).getWord2VecVectors());
+			categVectorMap2.put(categ, categVector);
 		}
 		
 		Map<String, Word2VecCentroid> mergedMap = new HashMap<String, Word2VecCentroid>();
@@ -1311,8 +1591,9 @@ public class Main {
 			for(int i =0; i<categVectorMap.get(categ).getCentroid().size(); i++){
 				double vec1 = categVectorMap.get(categ).getCentroid().get(i);
 				double vec2 = centroidMap.get(categ).getCentroid().get(i);
+				//double vec3 = categVectorMap2.get(categ).getCentroid().get(i);
 
-					double vec_merged = 0.2* (double) vec1 + 0.8* (double) vec2 ;
+					double vec_merged = (double) vec1 / (double) 10 + (double) vec2 ;
 					mergedListOfDoubles.add(vec_merged);
 			}
 			//System.out.println("THIS IS SIZE: " + mergedListOfDoubles.size());
@@ -1322,23 +1603,24 @@ public class Main {
 			mergedMap.put(categ, mergedCategVector);
 		}*/
 		
-		//testDataSetNew = applyTestHeuristics(testDataSet);
+		testDataSetNew = applyTestHeuristics(testDataSet);
+		//testDataSetNew = applyTestHeuristicsLowerNodes(testDataSet, categSet);
 		
-		Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSet);
+		//Map<String, List<Map<String, Double>>> vectorsTestDataSet = computeVectorsTestDataSet(testDataSetNew);
 		
 		/* centroids evaluation */
-		//Map<String, Centroid> centroidMapHeuristics = applyHeuristicsToCentroids(centroidMap, testDataSet);
-		//System.out.println("\tNow computing cosine similarity");
-		//Map<String, List<Integer>> cosineSimC = computeCosineSimCWord2Vec(testDataSet, categVectorMap);
-		Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
+		//Map<String, Word2VecCentroid> centroidMapHeuristics = applyHeuristicsToWord2VecCentroids(centroidMap, testDataSet);
+		System.out.println("\tNow computing cosine similarity");
+		Map<String, List<Integer>> cosineSimC = computeCosineSimCWord2Vec(testDataSetNew, centroidMap);
+		//Map<String, List<Integer>> cosineSimC = computeCosineSimC(vectorsTestDataSet, centroidMap);
 
-		//System.out.println("\tNow evaluating");
+		System.out.println("\tNow evaluating");
 		evalCentroids(cosineSimC);
 		/******************************Centroids done*****************************/
 		
 
 		//System.out.println("\tNow calculating merge - centroids");
-		//Map<String, Word2VecCentroid> mergeCentroidMap = makeMergeCentroidsWord2Vec(centroidMap, taxonomyAll, testDataSet, vectorsTestDataSet);
+		//makeMergeCentroidsWord2Vec(centroidMap, taxonomyAll, testDataSet, testDataSet);
 		//makeMergeCentroids(centroidMap, taxonomyAll, testDataSet, vectorsTestDataSet);
 		/* m - centroids evaluation is done inside makeMergeCentroids function */
 
@@ -1346,6 +1628,32 @@ public class Main {
 		
 	}
 	
+	public static Map<String, List<List<Double>>> tfidfEmbedPages (Map<String, NodeInfo> trainDataSetHeuristicsByCateg, InvertedIndex invIndexTrain) throws IOException{
+		
+		Map<String, CategoryNode> dictionary = new HashMap<String, CategoryNode>();
+		String dict = "C:/Users/dinaraDILab/word2vec/dict_featureVecs.csv";
+		System.out.println("Started read words from csv");
+		dictionary = csvCategToHashMapLastGram(dict);
+		System.out.println("Finished read words from csv");
+		
+		/******* TFIDF LATER SEE **********/
+		DocumentParser dp = new DocumentParser();
+		Map<String, List<List<Double>>> tfidfDocsMap = new HashMap<String, List<List<Double>>>();
+		List<Double> pageCentroid = null;
+		for(String catid: trainDataSetHeuristicsByCateg.keySet()){
+			List<List<Double>> pageList = new ArrayList<List<Double>>();
+			Map<String, List<List<Double>>> tfidfMultipliedWordVec = dp.tfIdfMultByWordEmb(trainDataSetHeuristicsByCateg.get(catid).getPages(), invIndexTrain, dictionary);
+			for(String page : tfidfMultipliedWordVec.keySet()){
+				//System.out.println("category: " + catid + " has page: " + page + " of size " + tfidfMultipliedWordVec.get(page).size() + " has vec: " + tfidfMultipliedWordVec.get(page));
+				pageCentroid = dp.makeCentroidWord2Vec(tfidfMultipliedWordVec.get(page));
+				pageList.add(pageCentroid);
+			}
+			tfidfDocsMap.put(catid, pageList);
+		}
+		/*********************************/
+		return tfidfDocsMap;
+		
+	}
 	public static void saveODPtoFile() throws SQLException, FileNotFoundException{
 		
 		Map<String, NodeInfo> testDataSet;
@@ -1415,10 +1723,14 @@ public class Main {
 
 		Map<String, NodeInfo> taxonomyAll;
 		Map<String, NodeInfo> taxonomyHeuristicsWorldReg;
-		taxonomyAll = applyNoHeuristics(CategoryTaxonomy, PageTaxonomy);
-		taxonomyHeuristicsWorldReg = applyHeuristicsWorldReg(CategoryTaxonomy, PageTaxonomy, taxonomyAll);
+		Map<String, NodeInfo> taxonomyHeuristicsWorld;
+		Map<String, NodeInfo> taxonomyHeuristicsKeepReg;
 		
-		return taxonomyHeuristicsWorldReg;
+		taxonomyAll = applyNoHeuristics(CategoryTaxonomy, PageTaxonomy);
+		//taxonomyHeuristicsWorldReg = applyHeuristicsWorldReg(CategoryTaxonomy, PageTaxonomy, taxonomyAll);
+		taxonomyHeuristicsWorld = applyHeuristicsWorld(CategoryTaxonomy, PageTaxonomy, taxonomyAll);
+
+		return taxonomyHeuristicsWorld;
 	}
 	
 	
@@ -1476,8 +1788,8 @@ public class Main {
 		System.out.println("computing merge centroid for root 0 took " + period + "ms");
 		
 		/* merge-centroid evaluation */
-		//Map<String, Word2VecCentroid> mergeCentroidMapHeuristics = applyHeuristicsToCentroids(mergeCentroids, testDataSet);
-		Map<String, List<Integer>> cosineSimMC = computeCosineSimCWord2Vec(vectorsTestDataSet, mergeCentroids);
+		Map<String, Word2VecCentroid> mergeCentroidMapHeuristics = applyHeuristicsToWord2VecCentroids(mergeCentroids, testDataSet);
+		Map<String, List<Integer>> cosineSimMC = computeCosineSimCWord2Vec(vectorsTestDataSet, mergeCentroidMapHeuristics);
 		evalCentroids(cosineSimMC);
 		
 	}
@@ -1575,19 +1887,42 @@ public class Main {
 			 int tpHit = 0;
 			 int fnMiss = 0;
 			 int fp = 0; 
+			 int checkFN = 0;
+			 
+			 int precision = 0;
+			 int recall = 0;
+			 int micro_f1 = 0;
+			 
 			 List<Integer> tpFnFpList;
 			 for(String catid: cosineSimC.keySet()) {
 				tpFnFpList = cosineSimC.get(catid);
 				//System.out.println("Category " + catid + " TP: " + tpFnFpList.get(0) + "  FN : " + tpFnFpList.get(1) + "  FP: " + tpFnFpList.get(2));
+				if(tpFnFpList.get(1)<2)
+					checkFN+=tpFnFpList.get(1);
+				
 				tpHit += tpFnFpList.get(0);
 				fnMiss += tpFnFpList.get(1);
 				fp += tpFnFpList.get(2);
+				
+				
 			}
 			period = System.currentTimeMillis() - millis;
 			System.out.println("computing number of hits and misses took " + period + "ms");
 			System.out.println("Number of all hits TP is : " + tpHit);
 			System.out.println("Number of all misses FN is : " + fnMiss);
 			System.out.println("Number of all misses FP is : " + fp);
+			System.out.println("checkFN : " + checkFN);
+			
+			
+			precision = tpHit/(tpHit + fnMiss);
+			recall = tpHit/(tpHit + fp);
+			if(!(precision + recall == 0))
+					micro_f1 = 2*precision*recall/(precision + recall);		
+			
+			System.out.println("Precision Mi: " + precision);
+			System.out.println("Recall Mi: " + recall);
+			System.out.println("Micro f1: " + micro_f1);
+
 			
 			/*for(String item : cosineSim.keySet()){
 				System.out.println("Current CatId is: " + item + " Assigned CatId List is : " + cosineSim.get(item));
@@ -1605,6 +1940,18 @@ public class Main {
 		}
 		
 
+		public static Map<String, Word2VecCentroid> applyHeuristicsToWord2VecCentroids(Map<String, Word2VecCentroid> centroidMap,
+				Map<String, NodeInfo> testData) {
+			/*** Apply heuristics to get only heuristics centroids ***/
+			Map<String, Word2VecCentroid> centroidsMapHeuristics = new HashMap<>();
+			for (String catId: testData.keySet()) {
+				//if(catId.equals("373313") || catId.equals("374275") || catId.equals("376801") || catId.equals("376814") || catId.equals("381511"))
+				
+				centroidsMapHeuristics.put(catId, centroidMap.get(catId));
+			}
+			return centroidsMapHeuristics;
+		}
+		
 		public static Map<String, List<Integer>> computeCosineSimC (Map<String, List<Map<String, Double>>>  CategoryTfidfDocsVectorsMap, Map<String, Centroid> centroidMapHeuristics)
 		{
 			long millis = System.currentTimeMillis();

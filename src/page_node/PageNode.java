@@ -9,7 +9,28 @@ public class PageNode {
 	String catid;
 	List<Double> word2VecVectors;
 	String fatherid;
+	String page_link;
+	List<String> tokenizedPageText;
+
+
+
+	public List<String> getTokenizedPageText() {
+		return tokenizedPageText;
+	}
+
+	public void setTokenizedPageText(List<String> tokenizedPageText) {
+		this.tokenizedPageText = tokenizedPageText;
+	}
+
 	
+	public String getPage_link() {
+		return page_link;
+	}
+
+	public void setPage_link(String page_link) {
+		this.page_link = page_link;
+	}
+
 	public String getFatherid() {
 		return fatherid;
 	}

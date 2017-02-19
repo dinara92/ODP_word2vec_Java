@@ -7,12 +7,17 @@ import java.util.Map;
 
 public class Word2VecCentroid {
 
-	
+	public static final Word2VecCentroid EMPTY = new Word2VecCentroid(new ArrayList<Double>(), 0.0);
 	List<Double> centroid = new ArrayList<Double>();
 	double centroid_lengthNorm = 0.0;
 
 	public Word2VecCentroid() {
 		
+	}
+	
+	public Word2VecCentroid(List<Double> list, double norm) {
+		this.centroid = list;
+		this.centroid_lengthNorm = norm;
 	}
 	
 	public Word2VecCentroid(List<Double> centroid) {

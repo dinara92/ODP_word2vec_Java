@@ -102,6 +102,20 @@ public class StringProcessingUtils {
 		return result;
 	}
     
+    public static List<String> tokenizeCategory(String string) {
+		//String result = "";
+    	List<String> result = new ArrayList<String>();
+ 		string = string.replaceAll("\\[", "").replaceAll("\\]","");
+		String[] words = string.split(", ");
+
+		for(String word : words) {
+			if(word.isEmpty()) continue;
+			//result += (word+" ");
+			result.add(word);
+		}
+		return result;
+	}
+    
     public static List<String> removeStemmedStopWords(String string) {
 		//String result = "";
     	List<String> result = new ArrayList<String>();
