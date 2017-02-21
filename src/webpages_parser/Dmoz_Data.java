@@ -133,7 +133,7 @@ public class Dmoz_Data {
 	}
 	
 	
-public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws SQLException, FileNotFoundException, InterruptedException, ExecutionException{
+public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws FileNotFoundException, InterruptedException, ExecutionException{
 		
 	    int id = 0;			
 		//PrintStream trainPages_bigSet = new PrintStream(new FileOutputStream(
@@ -167,24 +167,29 @@ public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws SQLException
 	        		
 	        		String query_set_pages = "INSERT INTO dmoz_pages_no_world_pagelinks (pages, catid, fatherid, pageid, link)"
 	        		        + " values (?, ?, ?, ?, ?);";
-	
-	        		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
-	        		statement_save.setString(1,tokenizedPage);
-	        		//statement_save.setString(2, tokenizedPageContent_new);
-	        		statement_save.setString(2, node.getCatid());
-	        		statement_save.setString(3, node.getFatherid());
-	        		statement_save.setString(4, page.get_id());
-	        		statement_save.setString(5, page.getPage_link());
+	        		
+	        		try {
+	            		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
+		        		statement_save.setString(1,tokenizedPage);
+		        		//statement_save.setString(2, tokenizedPageContent_new);
+		        		statement_save.setString(2, node.getCatid());
+		        		statement_save.setString(3, node.getFatherid());
+		        		statement_save.setString(4, page.get_id());
+		        		statement_save.setString(5, page.getPage_link());
 
-	        		statement_save.executeUpdate();
+		        		statement_save.executeUpdate();
+		    	        //UNSELECT TO COMMIT
+		    	        ConnectDb.getConnection().commit();
+	        		} catch (SQLException e) {
+	        			System.out.println("Failed to insert into db ODP page");
+	        			e.printStackTrace();
+	        		}
 	        		//trainPages_bigSet.println(tokenizedPage);
 	
 	        	}
 	        	
 	        //}	
 	        		
-	        //UNSELECT TO COMMIT
-	        ConnectDb.getConnection().commit();
 	        //trainPages_bigSet.close();
 			
 			//System.out.println("Number of rows should be added to db: " + id);
@@ -195,9 +200,7 @@ public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws SQLException
 		
 	}
 
-	public static void savePageContentToDB(String pageid, List<String> match) throws SQLException, FileNotFoundException, InterruptedException, ExecutionException{
-		
-	   int id = 0;			
+	public static void savePageContentToDB(String pageid, List<String> match) throws FileNotFoundException, InterruptedException, ExecutionException{	
 		
 	   ConnectDb.initPropertiesForSave();
 		final boolean dbConnected = ConnectDb.checkConnection();
@@ -207,19 +210,23 @@ public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws SQLException
 
 		PreparedStatement statement_update;   	
 		
-		
-		id++;
 		//1243968
-		String query_set_pages = "UPDATE dmoz_pages_no_world_pagecontent set page_content = ? where pageid = ?" +  ";";
+		String query_set_pages = "UPDATE dmoz_pages_no_world_pagecontent SET page_content = ? WHERE pageid = ?;";
 		String tokenizedPageContent = Arrays.toString(match.toArray());
-		
-		statement_update = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
-		statement_update.setString(1,pageid);
-		statement_update.setString(2,tokenizedPageContent);
 
-		statement_update.executeUpdate();
-		 //UNSELECT TO COMMIT
-        ConnectDb.getConnection().commit();
+		try {
+			statement_update = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
+			statement_update.setString(1,tokenizedPageContent);
+			statement_update.setString(2,pageid);
+
+			statement_update.executeUpdate();
+			//UNSELECT TO COMMIT
+	     ConnectDb.getConnection().commit();
+		} catch (SQLException e) {
+			System.out.println("Failed to update db with parsed page content");
+			e.printStackTrace();
+		}
+
 		System.out.println("Updated");
 
 	}
