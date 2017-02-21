@@ -1315,6 +1315,32 @@ public class Main {
 		return str_list;
 
 	}
+	
+	public static List<String> stringReplForPandasVectors(String vector_string){
+			
+	        /********** string replacing ***********/
+	        //System.out.println("THIS IS VECTOR STRING: " + vector_string.replace("?", "-01"));
+	        String vector_string_repl = vector_string.replace("e?", "");
+	    	List<String> str_list = StringProcessingUtils.tokenizeStringBySpaceForPandasVectors(vector_string_repl);
+	    	
+	    	String str_list_last_elem = str_list.get(str_list.size()-1);
+	    	//System.out.println("\tThis is last element: " + str_list_last_elem);
+	    	
+	    	String lastCharacter = str_list_last_elem.substring(str_list_last_elem.length() - 1);
+	    	//System.out.println("\tThis is last character: " + lastCharacter);
+	    	if(lastCharacter.equals("e")){
+	    		String str_list_last_elem_repl = str_list_last_elem.replace("e", "");
+	        	//System.out.println("\tThis is last element after: " + str_list_last_elem_repl);
+	        	Collections.replaceAll(str_list, str_list_last_elem, str_list_last_elem_repl);
+	    	}
+	        /********** string replacing ***********/
+	    	
+	    	//System.out.println("\tTokenized list: " + str_list);
+	    	//System.out.println("\tList of doubles: " + listOfStringToListOfDoubles(str_list));
+			return str_list;
+	
+		}
+
 	public static Map<String, NodeInfo> csvToHashMap(String csvFile) throws FileNotFoundException{
 		NodeInfo nodeTrain;
 		PageNode page;
@@ -1339,9 +1365,12 @@ public class Main {
             page.setFatherid(line.get(2));
             
             String vector_string = line.get(5);
-        	//List<String> str_list = StringProcessingUtils.tokenizeStringBySpace(vector_string);
-            List<String> str_list =stringRepl(vector_string);
-
+        	List<String> str_list = StringProcessingUtils.tokenizeStringBySpaceForPandasVectors(vector_string);
+            //System.out.println("Vector before: " + vector_string);
+            //List<String> str_list =stringRepl(vector_string);
+            //System.out.println("Vector after: " + str_list);
+            
+            
         	page.setWord2VecVectors(listOfStringToListOfDoubles(str_list));
 
             
@@ -1506,9 +1535,10 @@ public class Main {
 		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/trainMCOut_50f_allPagesODP.csv";
 		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TrainDocs.csv";
 
-		//String csvFileTrain = "/home/dinara/word2vec/word2vec_gensim_ODP/csv_files/dmoz_pages_all_no_world_only_TrainDocs.csv";
+		String csvFileTrain = "/home/dinara/word2vec/word2vec_gensim_ODP/test_csv/trainVecs_Out_odp_no_world_and_1bil_words.csv";
 		//String csvFileTrain = "/media/dinara/7698B11498B0D3B9/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TrainDocs_OutputVecs.csv";
-		
+		//String csvFileTrain = "/media/dinara/7698B11498B0D3B9/Users/dinaraDILab/word2vec/trainDataVecs_google_news - nan_row_deleted.csv";
+
 		//String csvFileTrain = "C:/Users/dinaraDILab/word2vec/new_bigram_phrase_dmoz_pages_all_no_world_only_TrainDocs_OutputVecs.csv";
 
 		
@@ -1522,8 +1552,10 @@ public class Main {
 		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/new_bigram_phrase_dmoz_pages_all_no_world_only_TestDocs_OutputVecs.csv";
 		//String csvFileTest = "C:/Users/dinaraDILab/word2vec/dmoz_pages_all_no_world_only_TestDocs.csv";
 		//String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/csv_files/dmoz_pages_all_no_world_only_TestDocs.csv";
-		String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/test_csv/testVecs_testfile.csv";
-		
+		//String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/test_csv/testVecs_testfile.csv";
+		String csvFileTest = "/home/dinara/word2vec/word2vec_gensim_ODP/test_csv/testVecs_Out_odp_no_world_and_1bil_words.csv";
+		//String csvFileTest = "/media/dinara/7698B11498B0D3B9/Users/dinaraDILab/word2vec/testDataVecs_google_news.csv";
+
 		//String csvFileCategs = "C:/Users/dinaraDILab/word2vec/odpCategs_allODP.csv";
 		//String csvFileCategs = "C:/Users/dinaraDILab/word2vec/categs_allODP+categs_phrase4.csv";
 		//String csvFileCategsLastGram = "C:/Users/dinaraDILab/word2vec/dict_featureVecs.csv";
@@ -1544,9 +1576,9 @@ public class Main {
 		//categSet = csvCategToHashMap_OnlyTopics(dmoz_4heuristics_categories);
 		//System.out.println("Finished read categories from csv");
 		
-		/*System.out.println("Started read train data from csv");
+		System.out.println("Started read train data from csv");
 		trainDataSetHeuristicsByCateg = csvToHashMap(csvFileTrain);
-		System.out.println("Finished read train data from csv");*/
+		System.out.println("Finished read train data from csv");
 
 		System.out.println("Started read test data from csv");
 		testDataSet = csvToHashMap(csvFileTest);
