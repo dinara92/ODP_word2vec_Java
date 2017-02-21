@@ -91,7 +91,7 @@ public class StringProcessingUtils {
     public static List<String> tokenizeStringBySpace(String string) {
 		//String result = "";
     	List<String> result = new ArrayList<String>();
-
+    	
 		String[] words = string.split("\\s+");
 
 		for(String word : words) {
@@ -102,6 +102,22 @@ public class StringProcessingUtils {
 		return result;
 	}
     
+    public static List<String> tokenizeStringBySpaceForPandasVectors(String string) {
+		//String result = "";
+    	List<String> result = new ArrayList<String>();
+    	string = string.replaceAll("\\[", "").replaceAll("\\]","");
+    	string = string.replaceAll(",", "");
+    	string = string.replaceAll("\"", "");
+    	
+		String[] words = string.split("\\s+");
+
+		for(String word : words) {
+			if(word.isEmpty()) continue;
+			//result += (word+" ");
+			result.add(word);
+		}
+		return result;
+	}
     public static List<String> tokenizeCategory(String string) {
 		//String result = "";
     	List<String> result = new ArrayList<String>();
@@ -116,7 +132,7 @@ public class StringProcessingUtils {
 		return result;
 	}
     
-    public static List<String> removeStemmedStopWords(String string) {
+    public synchronized static List<String> removeStemmedStopWords(String string) {
 		//String result = "";
     	List<String> result = new ArrayList<String>();
 
@@ -134,6 +150,7 @@ public class StringProcessingUtils {
 		}
 		return result;
 	}
+
 	public static String stemString(String string) {
 		return new Stemmer().stem(string);
 	}
