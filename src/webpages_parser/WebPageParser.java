@@ -149,7 +149,7 @@ public static NodeInfo passUrl_() throws SQLException, FileNotFoundException, In
 		newNode.setPages(pagesTexts);
 		//taxonomyWithPageText.put(catid, newNode);
 		
-		Dmoz_Data.AllODPSetSaveToFile_old(newNode);
+		Dmoz_Data.AllODPSetSaveToFile_byNode(newNode);
 
 }
 	return newNode;

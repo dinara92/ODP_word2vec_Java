@@ -105,7 +105,7 @@ public class App {
 
     		//taxonomyWithPageText.put(catid, newNode);
     		 
-    		//Dmoz_Data.AllODPSetSaveToFile_(newNode);
+    		Dmoz_Data.AllODPSetSaveToFile_byNode(newNode);
 
     }
     	return newNode;
