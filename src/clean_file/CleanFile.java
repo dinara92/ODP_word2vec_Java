@@ -8,6 +8,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 
+/*This class is for removing any character from strings in a file*/
 
 public class CleanFile {
 	 public void removeLineFromFile(String file, String lineToRemove) {
