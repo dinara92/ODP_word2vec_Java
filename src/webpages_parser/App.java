@@ -35,8 +35,7 @@ import static org.hamcrest.CoreMatchers.*;
  * Hello world!
  *
  */
-public class App 
-{
+public class App {
     
     public static Document connect(String url) {
         Document doc = null;
@@ -112,84 +111,9 @@ public class App
     	return newNode;
     }
     
-    public static void handleThreads(List<PageNode> pages, NodeInfo node) throws FileNotFoundException, SQLException, InterruptedException, ExecutionException{
+    public static Map<String, String> getLinks() throws SQLException {
     	
-    	
-    Collection<Match> matches = new ArrayList<Match>();
-    Map<String, FutureTask<Match>> matchesMap = new HashMap<String, FutureTask<Match>>();
-    Collection<Future<Match>> results = new ArrayList<Future<Match>>();
-    List<String> pageText;
-    //String[] elements = new String[12];
-    //Arrays.fill(elements, "http://movieweb.com/movie/iron-man/");
-    
-    ArrayList<String> elements = new ArrayList<String>();
-    for(PageNode page: pages){
-    	elements.add(page.getPage_link());
-    }
-    //for (String element : elements) {
-    /*for(PageNode page: pages){
-
-        pageText = new ArrayList<String>();
-
-        MatchWorker matchWorker = new MatchWorker(page.getPage_link());
-        FutureTask<Match> task = new FutureTask<Match>(matchWorker);
-        results.add(task);
-		pageText = StringProcessingUtils.removeStemmedStopWords(task.get().toString());
-
-        matchesMap.put(page.get_id(), task);
-        
-        Thread matchThread = new Thread(task);
-        matchThread.start();
-    }
-    
-    for(Future<Match> match : results) {
-        try {
-            matches.add(match.get());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }*/
-	long millis = System.currentTimeMillis();
-
-    ExecutorService executorService = Executors.newFixedThreadPool(30);
-	List<Future<Match>> handles = new ArrayList<Future<Match>>();
-	Future<Match> handle;
-	//String[] elements = new String[12];
-	//Arrays.fill(elements, "http://movieweb.com/movie/iron-man/");
-	String element = "";
-	for (int i=0; i < elements.size(); i++) {
-		element = elements.get(i);
-		System.out.println("This is element "+ i + " : " + element);
-		MatchWorker matchWorker = new MatchWorker(element);
-		handle = executorService.submit(matchWorker);
-		handles.add(handle);
-	}
-  
-	for (Future<Match> h : handles) {
-		try {
-			h.get();
-		} 
-		catch (Exception ex) {
-			ex.printStackTrace();
-		}
-	}
-	
-	executorService.shutdownNow();
-	System.out.println("Running parallel took " + (System.currentTimeMillis() - millis) +  " ms");
-	
-    
-    //Dmoz_Data.AllODPSetSaveToFile_(node, matchesMap);
-    
-    for (Match m : matches) {
-        System.out.println(m);
-    }
-
-    }
-    
-    
-    public static Map<String, PageNode> getLinks() throws SQLException{
-    	
-    	Map<String, PageNode> PagesMap = new HashMap<String, PageNode>();
+    	Map<String, String> pagesMap = new HashMap<String, String>();
 		PageNode page = null;
 		
 		ConnectDb.initPropertiesForSave();
@@ -225,96 +149,61 @@ public class App
 				row.put(md.getColumnName(i), rs_pages.getObject(i));
 			}
 			
-			page = new PageNode();
-			page.set_id(row.get("pageid").toString());
-			page.setPage_link(row.get("link").toString());
-			
-			PagesMap.put(page.get_id(), page);
+			pagesMap.put(row.get("pageid").toString(), row.get("link").toString());
 			
 		}
 
-		return PagesMap;
+		return pagesMap;
 	}
 	
 
 	
-    public static void runThreads(Map<String, PageNode> PagesMap){
+    public static void runThreads(Map<String, String> pagesMap){
     	
-   
+    	int numOfTasks = pagesMap.size();
+    	CountDownLatch countDownLatch = new CountDownLatch(numOfTasks);
+    	System.out.println(numOfTasks + " Tasks to run, starting..");
     	long millis = System.currentTimeMillis();
 
         ExecutorService executorService = Executors.newFixedThreadPool(50);
     	//List<Future<Match>> handles = new ArrayList<Future<Match>>();
-    	Future<Match> handle;
     	//String[] elements = new String[12];
     	//Arrays.fill(elements, "http://movieweb.com/movie/iron-man/");
-    	String element = "";
-    	for(String page_id: PagesMap.keySet()){ 
+    	String pageUrl = "";
+    	for(String pageId: pagesMap.keySet()) {
     		
-    		element = PagesMap.get(page_id).getPage_link();
+    		pageUrl = pagesMap.get(pageId);
     		//System.out.println("This is element "+ page_id + " : " + element);
-    		MatchWorker matchWorker = new MatchWorker(element);
-    		handle = executorService.submit(matchWorker);
-    		//handles.add(handle);
-    		List<String> tokenizedPageContentList = new ArrayList<String>();
-			try {
-				String raw_h = handle.get().toString();
-				assertNotNull(raw_h);
-				tokenizedPageContentList = StringProcessingUtils.removeStemmedStopWords(raw_h);
-        		System.out.println(page_id + " : " + tokenizedPageContentList);
-        		
-
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-
-    		try {
-				Dmoz_Data.savePageContentToDB(page_id, tokenizedPageContentList);
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} catch (ExecutionException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+    		Runnable matchWorker = new MatchWorker(pageId, pageUrl, countDownLatch);
+    		executorService.execute(matchWorker);
     	}
-      
-    	/*for (Future<Match> h : handles) {
-    		try {
-    			String raw_h = h.get().toString();
-    			System.out.println(raw_h);
-    			List<String> tokenizedPageContentList = StringProcessingUtils.removeStemmedStopWords(raw_h);
-        		//String tokenizedPageContent_new = Arrays.toString(tokenizedPageContentList.toArray());
-        		System.out.println(tokenizedPageContentList);
-    		} 
-    		catch (Exception ex) {
-    			ex.printStackTrace();
-    		}
-    	}*/
     	
-    	executorService.shutdownNow();
+    	executorService.shutdown();
+    	
+    	finishWork(countDownLatch);
     	System.out.println("Running parallel took " + (System.currentTimeMillis() - millis) +  " ms");
-
-
         }
     
     
     
-    public static void main( String[] args ) throws IOException, SQLException, InterruptedException, ExecutionException
-    {
-    	//passUrl_();
-    	Map<String, PageNode> pages = getLinks();
-    	runThreads(pages);
+    public static void main( String[] args ) {
+    	try {
+        	Map<String, String> pages = getLinks();
+        	runThreads(pages);
+    	} catch (Exception e) {
+    		System.out.println("Error in main");
+    		e.printStackTrace();
+    	}
+    }
+    
+    public static void finishWork(CountDownLatch countDownLatch) {
+        try {
 
+            System.out.println("START WAITING");
+            countDownLatch.await();
+            System.out.println("DONE WAITING");
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
     }
 }
