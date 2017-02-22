@@ -74,7 +74,7 @@ public class Dmoz_Data {
 		return taxonomyHeuristicsWorld;
 	}
 
-	public static void AllODPSetSaveToFile(Map<String, NodeInfo> taxonomy) throws SQLException, FileNotFoundException{
+	public static void AllODPSetSaveToFile(Map<String, NodeInfo> taxonomy) throws FileNotFoundException{
 			
 	    int id = 0;			
 		//PrintStream trainPages_bigSet = new PrintStream(new FileOutputStream(
@@ -103,25 +103,38 @@ public class Dmoz_Data {
 	        		//String tokenizedPageContent = Arrays.toString(page.getTokenizedPageText().toArray());
 	        		id = id+1;
 	        		
-	        		String query_set_pages = "INSERT INTO dmoz_pages_no_world_pagecontent (pages, catid, fatherid, pageid, link)"
+	        		String query_set_pages = "INSERT INTO dmoz_pages_no_world_pagelinks (pages, catid, fatherid, pageid, link)"
 	        		        + " values (?, ?, ?, ?, ?);";
-	
-	        		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
-	        		statement_save.setString(1,tokenizedPage);
-	        		//statement_save.setString(2, tokenizedPageContent);
-	        		statement_save.setString(3, catid);
-	        		statement_save.setString(4, taxonomy.get(catid).getFatherid());
-	        		statement_save.setString(5, page.get_id());
-	        		statement_save.setString(6, page.getPage_link());
+	        		
+	        		try {
+		        		statement_save = (PreparedStatement) ConnectDb.getConnection().prepareStatement(query_set_pages);
+						statement_save.setString(1,tokenizedPage);
+						statement_save.setString(2, catid);
+		        		statement_save.setString(3, taxonomy.get(catid).getFatherid());
+		        		statement_save.setString(4, page.get_id());
+		        		statement_save.setString(5, page.getPage_link().toString());
 
-	        		statement_save.executeUpdate();
+		        		statement_save.executeUpdate();
+		        		
+					} catch (SQLException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+	        			System.out.println("Failed to insert into db ODP page " + page.get_id());
+
+					}
+	        		
 	        		//trainPages_bigSet.println(tokenizedPage);
 	
 	        	}
 	        	
 	        }	
 	        //UNSELECT TO COMMIT
-	        ConnectDb.getConnection().commit();
+	        try {
+				ConnectDb.getConnection().commit();
+			} catch (SQLException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 	        //trainPages_bigSet.close();
 			
 			System.out.println("Number of rows should be added to db: " + id);
@@ -200,7 +213,7 @@ public static void AllODPSetSaveToFile_byNode(NodeInfo node) throws FileNotFound
 		
 	}
 
-	public static void savePageContentToDB(String pageid, List<String> match) throws FileNotFoundException, InterruptedException, ExecutionException{	
+	public static synchronized void savePageContentToDB(String pageid, List<String> match) throws FileNotFoundException, InterruptedException, ExecutionException{	
 		
 	   ConnectDb.initPropertiesForSave();
 		final boolean dbConnected = ConnectDb.checkConnection();

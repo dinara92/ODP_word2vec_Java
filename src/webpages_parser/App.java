@@ -48,10 +48,10 @@ public class App {
     }
     
     
-    public static NodeInfo passUrl_() throws SQLException, FileNotFoundException, InterruptedException, ExecutionException{
+    public static void passUrl_() throws SQLException, FileNotFoundException, InterruptedException, ExecutionException{
     	
     	Map<String, NodeInfo> taxonomyAll = Dmoz_Data.makeTaxonomyAll();
-    	//Map<String, NodeInfo> taxonomyWithPageText = new HashMap<String, NodeInfo>();
+    	Map<String, NodeInfo> taxonomyWithPageText = new HashMap<String, NodeInfo>();
     	//List<String> pageText;
     	List<PageNode> pagesTexts;
     	NodeInfo newNode = null;
@@ -97,18 +97,19 @@ public class App {
     		newNode.setCatid(catid);
     		newNode.setFatherid(taxonomyAll.get(catid).getFatherid());
     		newNode.setPages(pagesTexts);
-			System.out.println("starting to parse text from url ");
-			long millis = System.currentTimeMillis();
+			//System.out.println("starting to parse text from url ");
+			//long millis = System.currentTimeMillis();
 
     		//handleThreads(newNode.getPages(), newNode);
-			System.out.println("took " + (System.currentTimeMillis() - millis) +  " ms");
+			//System.out.println("took " + (System.currentTimeMillis() - millis) +  " ms");
 
-    		//taxonomyWithPageText.put(catid, newNode);
+    		taxonomyWithPageText.put(catid, newNode);
     		 
-    		Dmoz_Data.AllODPSetSaveToFile_byNode(newNode);
 
     }
-    	return newNode;
+		System.out.println("Taxonomy made, now saving to db");
+    	//Dmoz_Data.AllODPSetSaveToFile(taxonomyWithPageText);
+
     }
     
     public static Map<String, String> getLinks() throws SQLException {
@@ -187,13 +188,28 @@ public class App {
     
     
     public static void main( String[] args ) {
-    	try {
+    	/*try {
         	Map<String, String> pages = getLinks();
         	runThreads(pages);
     	} catch (Exception e) {
     		System.out.println("Error in main");
     		e.printStackTrace();
-    	}
+    	}*/
+    	try {
+			passUrl_();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
     }
     
     public static void finishWork(CountDownLatch countDownLatch) {
