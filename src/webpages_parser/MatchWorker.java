@@ -43,6 +43,7 @@ public MatchWorker(String pageid, String url, CountDownLatch latch) {
         Elements divs = null;
         try {
         	divs = App.connect(url).select("div, p, b");
+        	System.out.println("Retrieved page " + pageid);
         } catch (Exception e) {
         	System.out.println("Failed to retrieve page on url: " + url);
 			e.printStackTrace();
@@ -60,9 +61,9 @@ public MatchWorker(String pageid, String url, CountDownLatch latch) {
 	     //allTextFromPage = new Match(all_paragraphs);
 	     //System.out.println("This is text from page: " + allTextFromPage);
 		assertNotNull(all_paragraphs);
-		System.out.println("all paragraph " + all_paragraphs);
+		//System.out.println("all paragraph " + all_paragraphs);
 		tokenizedPageContentList = StringProcessingUtils.removeStemmedStopWords(all_paragraphs);
-		System.out.println("tokenized string " + tokenizedPageContentList);
+		//System.out.println("tokenized string " + tokenizedPageContentList);
 		try {
 			Dmoz_Data.savePageContentToDB(pageid, tokenizedPageContentList);
 		} catch (Exception e) {
