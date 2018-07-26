@@ -59,7 +59,9 @@ public class DocumentParser {
 			double norm = Math.sqrt(vec_length);
 			// put Normalized vectors
 			for (String term : tfidfMap.keySet()) {
-				tfidfMap.put(term, tfidfMap.get(term) / (double)(norm));
+				//tfidfMap.put(term, tfidfMap.get(term) / (double)(norm));
+				tfidfMap.put(term, tfidfMap.get(term));
+
 			}
 			/*** ***************** ***/
 			
@@ -194,14 +196,14 @@ public class DocumentParser {
 		double norm = Math.sqrt(vec_length);
 		
 		// put Normalized centroids and / tfidfDocsMap.size()
-		for (String term : centroid.keySet()) {
+		/*for (String term : centroid.keySet()) {
 			centroid.put(term, centroid.get(term) / (double)(norm) / (double) tfidfDocsMap.size());
-		}
+		}*/
 		/*** **************** ***/
 		
-		/*for (String term : centroid.keySet()) {
-			centroid.put(term, centroid.get(term) / tfidfDocsMap.size());
-		}*/
+		for (String term : centroid.keySet()) {
+			centroid.put(term, centroid.get(term) / (double) tfidfDocsMap.size());
+		}
 		return centroid;
 	}
 	
@@ -417,6 +419,7 @@ public class DocumentParser {
 				mergeCentroid.normalize();
 			}
 			double norm;
+			
 			for (String child : childList) {
 				//Map<String, Double> childCentroid = mergeCentroids.get(child);
 				Word2VecCentroid childCentroid = mergeCentroidMap.get(child);

@@ -6,6 +6,15 @@ public class PageNode {
 	String doc_id;
 	String description;
 	List<String> tokenizedPage;
+	String tokenizedPageAsString;
+	public String getTokenizedPageAsString() {
+		return tokenizedPageAsString;
+	}
+
+	public void setTokenizedPageAsString(String tokenizedPageAsString) {
+		this.tokenizedPageAsString = tokenizedPageAsString;
+	}
+
 	String catid;
 	List<Double> word2VecVectors;
 	String fatherid;

@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -74,17 +75,7 @@ public class App {
 
     			PageNode newPage = new PageNode();
     			String url_link = page.getPage_link();
-    			//String url_link = "http://movieweb.com/movie/iron-man/";
-
-    			//System.out.println("starting to parse text from url " + url_link);
-    			//long millis = System.currentTimeMillis();
-    			//pageText = StringProcessingUtils.removeStemmedStopWords(getPageText(url_link));
     			
-    			//System.out.println("took " + (millis - System.currentTimeMillis()) +  " ms");
-    			//System.out.println("This page's " + page.get_id() +  " all paragraphs: " + pageText);
-    			//System.out.println("\tThis page's " + page.get_id() +  " page title + description: " + page.getTokenizedPage());
-    			
-
     			newPage.set_id(page.get_id());
     			newPage.setCatid(catid);
     			//newPage.setTokenizedPageText(pageText);
@@ -112,9 +103,9 @@ public class App {
 
     }
     
-    public static Map<String, String> getLinks() throws SQLException {
+    public static Map<String, PageNode> getLinks() throws SQLException {
     	
-    	Map<String, String> pagesMap = new HashMap<String, String>();
+    	Map<String, PageNode> pagesMap = new HashMap<String, PageNode>();
 		PageNode page = null;
 		
 		ConnectDb.initPropertiesForSave();
@@ -126,7 +117,7 @@ public class App {
 		System.out.println("Successfully connected to " + ConnectDb.getEngine().toUpperCase() + " database "
 				+ ConnectDb.getDB() + "@" + ConnectDb.getHost() + " as user " + ConnectDb.getUsername());
 
-		String query_pages = "SELECT pageid, link FROM dmoz_pages_no_world_pagecontent" + ";";
+		String query_pages = "SELECT * FROM dmoz_pages_no_world_pagelinks" + ";";
 
 		Statement stmt = null;
 
@@ -150,7 +141,13 @@ public class App {
 				row.put(md.getColumnName(i), rs_pages.getObject(i));
 			}
 			
-			pagesMap.put(row.get("pageid").toString(), row.get("link").toString());
+			PageNode pageThis = new PageNode();
+			pageThis.set_id(row.get("pageid").toString());
+			pageThis.setCatid(row.get("catid").toString());
+			pageThis.setFatherid(row.get("fatherid").toString());
+			pageThis.setTokenizedPageAsString(row.get("pages").toString());
+			pageThis.setPage_link(row.get("link").toString());
+			pagesMap.put(row.get("pageid").toString(), pageThis);
 			
 		}
 
@@ -158,58 +155,131 @@ public class App {
 	}
 	
 
-	
-    public static void runThreads(Map<String, String> pagesMap){
+public static HashSet<String> getPreviouslyNotAddedPageIds() throws SQLException {
     	
-    	int numOfTasks = pagesMap.size();
+    	HashSet<String> pagesIdSet = new HashSet<String>();
+		PageNode page = null;
+		
+		ConnectDb.initPropertiesForSave();
+		final boolean dbConnected = ConnectDb.checkConnection();
+		if (!dbConnected) {
+			System.exit(1);
+		}
+
+		System.out.println("Successfully connected to " + ConnectDb.getEngine().toUpperCase() + " database "
+				+ ConnectDb.getDB() + "@" + ConnectDb.getHost() + " as user " + ConnectDb.getUsername());
+
+		String query_pages = "SELECT * FROM dmoz_pages_no_world_pagelinks "
+				+ "WHERE dmoz_pages_no_world_pagelinks.pageid NOT IN "
+				+ "(SELECT dmoz_pages_no_world_pagecontent_parsed.pageid "
+				+ "FROM dmoz_pages_no_world_pagecontent_parsed)" + ";";
+
+		Statement stmt = null;
+
+		try {
+			stmt = (Statement) ConnectDb.getConnection().createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+					ResultSet.CONCUR_READ_ONLY);
+			
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		ResultSet rs_pages = stmt.executeQuery(query_pages);
+
+		ResultSetMetaData md = rs_pages.getMetaData();
+		int columns = md.getColumnCount();
+		
+		while (rs_pages.next()) {
+			Map<String, Object> row = new HashMap<String, Object>(columns);
+
+			for (int i = 1; i <= columns; ++i) {
+				row.put(md.getColumnName(i), rs_pages.getObject(i));
+				//System.out.println("This is md: " + md.getColumnName(i) +  rs_pages.getObject(i));
+
+			}
+			
+			pagesIdSet.add(row.get("pageid").toString());
+			
+		}
+
+		return pagesIdSet;
+	}
+
+    public static void runThreads(Map<String, PageNode> pagesMap, Map<String, PageNode> pageContent, HashSet<String> pagePrev) {
+    	
+    	/* For TEST
+    	List<String> pageIdList = new ArrayList<String>();
+    	pageIdList.add("1742390");
+    	pageIdList.add("501598");
+    	pageIdList.add("501612");
+    	pageIdList.add("500834");
+    	pageIdList.add("500856");
+    	int numOfTasks = pageIdList.size();
+    	*/
+    	
+    	
+    	//int numOfTasks = pagesMap.size();
+    	int numOfTasks = pagePrev.size(); //number of left tasks, after 1st db was already filled
+
     	CountDownLatch countDownLatch = new CountDownLatch(numOfTasks);
     	System.out.println(numOfTasks + " Tasks to run, starting..");
     	long millis = System.currentTimeMillis();
 
-        ExecutorService executorService = Executors.newFixedThreadPool(50);
+        ExecutorService executorService = Executors.newFixedThreadPool(250);
     	//List<Future<Match>> handles = new ArrayList<Future<Match>>();
     	//String[] elements = new String[12];
     	//Arrays.fill(elements, "http://movieweb.com/movie/iron-man/");
     	String pageUrl = "";
-    	for(String pageId: pagesMap.keySet()) {
+    	String catid = "";
+    	String fatherid = "";
+    	String tokenizedPage = "";
+    	
+    	//for(String pageId: pageIdList) {   //for TEST
+    	for(String pageId: pagePrev) {
     		
-    		pageUrl = pagesMap.get(pageId);
+    		pageUrl = pagesMap.get(pageId).getPage_link();
+    		catid = pagesMap.get(pageId).getCatid();
+    		fatherid = pagesMap.get(pageId).getFatherid();
+    		tokenizedPage = pagesMap.get(pageId).getTokenizedPageAsString();
     		//System.out.println("This is element "+ page_id + " : " + element);
-    		Runnable matchWorker = new MatchWorker(pageId, pageUrl, countDownLatch);
+    		//if(!pagePrev.contains(pageId)){ //with this, too slow
+    		Runnable matchWorker = new MatchWorker(pageId, pageUrl, catid, fatherid, tokenizedPage, countDownLatch, pageContent, pagePrev);
     		executorService.execute(matchWorker);
+    		//}
+
     	}
     	
     	executorService.shutdown();
     	
     	finishWork(countDownLatch);
     	System.out.println("Running parallel took " + (System.currentTimeMillis() - millis) +  " ms");
-        }
+    }
     
     
     
     public static void main( String[] args ) {
-    	/*try {
-        	Map<String, String> pages = getLinks();
-        	runThreads(pages);
+    	try {
+        	Map<String, PageNode> pages = getLinks();
+        	HashSet<String> pagesPrev = getPreviouslyNotAddedPageIds();
+        	System.out.println("Map size " + pages.size());
+        	System.out.println("Hashset size " + pagesPrev.size());
+        	System.out.println(pagesPrev.size() + " Tasks to run, starting.."); //number of left tasks, after 1st db was already filled
+        	
+        	//Map<String, PageNode> pageContent = new ConcurrentHashMap<String, PageNode>();
+        	//runThreads(pages, pageContent, pagesPrev);
+        	
+    		/*try {
+    			System.out.println("Now writing to db...");
+    			Dmoz_Data.odpByPagesSaveToDB(pageContent);
+    		} catch (FileNotFoundException e) {
+    			e.printStackTrace();
+    		}*/
+
     	} catch (Exception e) {
     		System.out.println("Error in main");
     		e.printStackTrace();
-    	}*/
-    	try {
-			passUrl_();
-		} catch (FileNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (ExecutionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+    	}
     }
     
     public static void finishWork(CountDownLatch countDownLatch) {

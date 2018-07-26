@@ -24,10 +24,13 @@ public class InvertedIndex {
     public InvertedIndex(Map<String, NodeInfo> taxonomy) throws IOException {
 		for(String catId : taxonomy.keySet()) {
 			NodeInfo node = taxonomy.get(catId);
-			for (PageNode page: node.getPages()) {
-				indexDoc(page.getTokenizedPage());
+			if(node!=null){
+				if(node.getPages()!=null){
+				for (PageNode page: node.getPages()) {
+					indexDoc(page.getTokenizedPage());
+				}
 			}
-        }
+        }}
     }
 
     public Map<String, List<Document>> getIndex() {

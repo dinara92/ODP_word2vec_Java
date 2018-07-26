@@ -92,15 +92,15 @@ public class CosineSim {
 		String assignedCatid;
 
 
-			for(String catid : centroidMap.keySet()) {
+			/*for(String catid : centroidMap.keySet()) {
 				assignedEntity = cosineSim.maxCosineSimilarityWord2VecEntity(catid, centroidMap.get(catid), entityMap);		
 				returnedEntities.add(assignedEntity);
-			}
+			}*/
 			
-			/*for(String entity : entityMap.keySet()) {
+			for(String entity : entityMap.keySet()) {
 				assignedCatid = cosineSim.maxCosineSimilarityWord2VecCategoriesForEntity(entityMap.get(entity), centroidMap);		
 				returnedEntities.add(assignedCatid);
-			}*/
+			}
 			
 
 	}
@@ -218,10 +218,9 @@ public class CosineSim {
 			cosineSimSumsMap.put(entity, cosineSimSum /(double)(normV * normC));
 		}
 			
-		System.out.println("\nSorted Map......By Value");
         Map<String, Double> sortedMap = sortByValue(cosineSimSumsMap);
-        System.out.println("\tFor catid : " + catid);
-        printMap(sortedMap);
+        //System.out.println("\tFor catid : " + catid);
+        printMap2(sortedMap, catid);
 		
 		/*** get the cosineSimMax - most similar to category corresponding to cosineSimMax ***/
 		//double cosineSimMax = Collections.max(cosineSimSumsMap.values());
@@ -295,10 +294,10 @@ public class CosineSim {
 		//double cosineSimMax = Collections.max(cosineSimSumsMap.values());
 		//System.out.println("Max cos similarity is " + cosineSimMax);
 		
-		System.out.println("\nSorted Map......By Value");
+		//System.out.println("\nSorted Map......By Value");
         Map<String, Double> sortedMap = sortByValue(cosineSimSumsMap);
-        System.out.println("\tFor entity : " + doc.get_id());
-        printMap(sortedMap);
+        //System.out.println("\tFor entity : " + doc.get_id());
+        printMap(sortedMap, doc.get_id());
         
 		/*** get catId of the cosineSimMax - most similar ***/
 		 /*for (Entry<String, Double> entry : cosineSimSumsMap.entrySet()) {
@@ -338,14 +337,38 @@ public class CosineSim {
         return sortedMap;
     }
     
-    public static <K, V> void printMap(Map<K, V> map) {
+    public static <K, V> void printMap(Map<K, V> map, String entity) {
     	int i = 0;
-        for (Map.Entry<K, V> entry : map.entrySet()) {
-        	i++;
-            System.out.println("Key : " + entry.getKey()
-                    + " Value : " + entry.getValue());
-            if(i>11)
-            	break;
-        }
+        //System.out.println("Is entity : " + entity);
+
+    	if(entity.equals("db_Java") || entity.equals("db_Vase") || entity.equals("db_Bird") || entity.equals("db_DNA")
+    			|| entity.equals("db_Apple_Inc") || entity.equals("db_Apple") || entity.equals("db_Fedora")){
+            System.out.println("\tFor entity : " + entity);
+
+	        for (Map.Entry<K, V> entry : map.entrySet()) {
+	        	i++;
+	            System.out.println("Key : " + entry.getKey()
+	                    + " Value : " + entry.getValue());
+	            if(i>11)
+	            	break;
+	        }
+    	}
+    }
+    
+    public static <K, V> void printMap2(Map<K, V> map, String catid) {
+    	int i = 0;
+        //System.out.println("Is entity : " + entity);
+
+    	if(catid.equals("380930") || catid.equals("423767") || catid.equals("961556")){  	
+            System.out.println("\tFor catid : " + catid);
+
+	        for (Map.Entry<K, V> entry : map.entrySet()) {
+	        	i++;
+	            System.out.println("Key : " + entry.getKey()
+	                    + " Value : " + entry.getValue());
+	            if(i>50)
+	            	break;
+	        }
+    	}
     }
 }

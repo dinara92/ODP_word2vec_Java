@@ -4,7 +4,11 @@ import static org.junit.Assert.assertNotNull;
 
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
 /*
@@ -16,6 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import page_node.PageNode;
 import utils.StringProcessingUtils;
 
 /**
@@ -26,13 +31,24 @@ public class MatchWorker implements Runnable {
 
 private String pageid;
 private String url;
+private String catid;
+private String fatherid;
+private String tokenizedPage;
 private CountDownLatch countDownLatch;
+private Map<String, PageNode> pageContent;
+private HashSet<String> pagePrev;
 String all_paragraphs = "";
 
-public MatchWorker(String pageid, String url, CountDownLatch latch) {
+public MatchWorker(String pageid, String url, String catid, String fatherid, String tokenizedPage, 
+		CountDownLatch latch, Map<String, PageNode> pageContent, HashSet<String> pagePrev) {
     this.pageid = pageid;
     this.url = url;
+    this.catid = catid;
+    this.fatherid = fatherid;
+    this.tokenizedPage = tokenizedPage;
     this.countDownLatch = latch;
+    this.pageContent = pageContent;
+    this.pagePrev = pagePrev;
 }
 
 	@Override
@@ -43,7 +59,7 @@ public MatchWorker(String pageid, String url, CountDownLatch latch) {
         Elements divs = null;
         try {
         	divs = App.connect(url).select("div, p, b");
-        	System.out.println("Retrieved page " + pageid);
+        	//System.out.println("Retrieved page " + pageid);
         } catch (Exception e) {
         	System.out.println("Failed to retrieve page on url: " + url);
 			e.printStackTrace();
@@ -64,13 +80,40 @@ public MatchWorker(String pageid, String url, CountDownLatch latch) {
 		//System.out.println("all paragraph " + all_paragraphs);
 		tokenizedPageContentList = StringProcessingUtils.removeStemmedStopWords(all_paragraphs);
 		//System.out.println("tokenized string " + tokenizedPageContentList);
-		try {
-			Dmoz_Data.savePageContentToDB(pageid, tokenizedPageContentList);
-		} catch (Exception e) {
-			System.out.println("Failed to save url content to db");
-			e.printStackTrace();
-		}
+		//if(!pagePrev.contains(pageid)){
+			try {
+				//Dmoz_Data.savePageContentToDB(pageid, tokenizedPageContentList);
+				//String tokenizedPageContent = Arrays.toString(tokenizedPageContentList.toArray());
+				PageNode newPage = new PageNode();
+				newPage.set_id(pageid);
+				//System.out.println("pageid" + newPage.get_id());
+				newPage.setCatid(catid);
+				//System.out.println("catid" + newPage.getCatid());
+	
+				newPage.setFatherid(fatherid);
+				//System.out.println("fatherid" + newPage.getFatherid());
+	
+	    		//System.out.println("before db: " + tokenizedPage);
+				newPage.setTokenizedPageAsString(tokenizedPage);
+				//System.out.println("tokenizedPage" + newPage.getTokenizedPageAsString());
+	
+				newPage.setTokenizedPageText(tokenizedPageContentList);
+				//System.out.println("tokenizedPageText" + newPage.getTokenizedPageText());
+	
+				//pageContent.put(pageid, newPage);
+				Dmoz_Data.saveByPageToDB(pageid, newPage);
+				
+			} catch (Exception e) {
+				System.out.println("Failed to save url content to db");
+				e.printStackTrace();
+			}
+		
+		//}
+		//else{
+			//System.out.println("\tAlready parsed " + pageid);
+		//}
 		countDownLatch.countDown();
+		
 		System.out.println(countDownLatch.getCount() + " Tasks left to finish");
 	}
 }
